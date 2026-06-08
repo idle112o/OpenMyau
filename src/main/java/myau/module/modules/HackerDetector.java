@@ -5,6 +5,7 @@ import myau.clientanticheat.AimDuplicateLookCheck;
 import myau.clientanticheat.AimModulo360Check;
 import myau.clientanticheat.AutoBlockCheck;
 import myau.clientanticheat.BadPacketsCheck;
+import myau.clientanticheat.CheckDataManager;
 import myau.clientanticheat.ClientAntiCheatContext;
 import myau.clientanticheat.KillAuraCheck;
 import myau.clientanticheat.MotionCheck;
@@ -64,6 +65,7 @@ public class HackerDetector extends Module implements ClientAntiCheatContext {
     private final VelocityCheck velocityCheck = new VelocityCheck();
     private final NoFallCheck noFallCheck = new NoFallCheck();
     private final MotionCheck motionCheck = new MotionCheck();
+    private final CheckDataManager checkDataManager = new CheckDataManager();
     private final Map<String, int[]> flagMap = new HashMap<>();
     private final Map<String, Integer> alertCooldowns = new HashMap<>();
     private final Set<String> whitelist = new HashSet<>();
@@ -79,16 +81,18 @@ public class HackerDetector extends Module implements ClientAntiCheatContext {
         }
 
         World world = mc.theWorld;
+        this.checkDataManager.update(world);
         long currentTick = world.getTotalWorldTime();
         for (EntityPlayer player : new ArrayList<>(world.playerEntities)) {
             if (player == mc.thePlayer || player.isDead || player.getName() == null) {
                 continue;
             }
+            myau.clientanticheat.PlayerCheckData data = this.checkDataManager.get(player);
             if (this.autoBlock.getValue()) {
                 this.autoBlockCheck.check(player, currentTick, this);
             }
             if (this.noSlow.getValue()) {
-                this.noSlowCheck.check(player, currentTick, this);
+                this.noSlowCheck.check(player, data, currentTick, this);
             }
             if (this.killAura.getValue()) {
                 this.killAuraCheck.check(player, world, currentTick, this);
@@ -103,22 +107,22 @@ public class HackerDetector extends Module implements ClientAntiCheatContext {
                 this.aimModulo360Check.check(player, this);
             }
             if (this.reach.getValue()) {
-                this.reachCheck.check(player, world, this);
+                this.reachCheck.check(player, world, data, this);
             }
             if (this.sprint.getValue()) {
-                this.sprintCheck.check(player, this);
+                this.sprintCheck.check(player, data, this);
             }
             if (this.badPackets.getValue()) {
-                this.badPacketsCheck.check(player, this);
+                this.badPacketsCheck.check(player, data, this);
             }
             if (this.velocity.getValue()) {
-                this.velocityCheck.check(player, this);
+                this.velocityCheck.check(player, data, this);
             }
             if (this.noFall.getValue()) {
-                this.noFallCheck.check(player, this);
+                this.noFallCheck.check(player, data, this);
             }
             if (this.motion.getValue()) {
-                this.motionCheck.check(player, this);
+                this.motionCheck.check(player, data, this);
             }
         }
         this.pruneFlags();
@@ -216,6 +220,7 @@ public class HackerDetector extends Module implements ClientAntiCheatContext {
         this.velocityCheck.reset();
         this.noFallCheck.reset();
         this.motionCheck.reset();
+        this.checkDataManager.reset();
         this.flagMap.clear();
         this.alertCooldowns.clear();
     }

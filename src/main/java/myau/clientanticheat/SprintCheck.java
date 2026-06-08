@@ -8,44 +8,42 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class SprintCheck {
-    private final Map<String, Integer> buffer = new HashMap<>();
-    private final Map<String, Integer> omniBuffer = new HashMap<>();
+    private final Map<String, CheckBuffer> blockSprintBuffers = new HashMap<>();
+    private final Map<String, CheckBuffer> omniSprintBuffers = new HashMap<>();
 
-    public void check(EntityPlayer player, ClientAntiCheatContext context) {
+    public void check(EntityPlayer player, PlayerCheckData data, ClientAntiCheatContext context) {
+        if (data == null || player.ticksExisted < 20 || data.recentlyTeleported() || data.recentlyHurt()) return;
+        String name = player.getName();
+        CheckBuffer blockBuffer = this.blockSprintBuffers.computeIfAbsent(name, key -> new CheckBuffer());
+        CheckBuffer omniBuffer = this.omniSprintBuffers.computeIfAbsent(name, key -> new CheckBuffer());
+
         ItemStack heldItem = player.getHeldItem();
         boolean blocking = heldItem != null && heldItem.getItem() instanceof ItemSword && player.isBlocking();
-        boolean suspicious = blocking && player.isSprinting() && player.motionY == 0.0D;
-        String name = player.getName();
-        int vl = this.buffer.getOrDefault(name, 0);
-        if (suspicious) {
-            vl++;
-            if (vl > 10) {
+        boolean blockSprint = blocking && player.isSprinting() && data.horizontalDelta > 0.16D;
+        if (blockSprint) {
+            if (blockBuffer.flag(1.0D, 6.0D)) {
                 context.receiveSignal(name, "Sprint");
-                vl = 0;
+                blockBuffer.reset();
             }
         } else {
-            vl = Math.max(0, vl - 1);
+            blockBuffer.decay(0.45D);
         }
-        this.buffer.put(name, vl);
 
-        int omniVl = this.omniBuffer.getOrDefault(name, 0);
-        boolean omniSprint = player.isSprinting()
-                && (player.moveForward < 0.0F || player.moveForward == 0.0F && player.moveStrafing != 0.0F)
-                && player.hurtTime == 0;
+        boolean movingSideways = Math.abs(player.moveStrafing) > Math.abs(player.moveForward) && Math.abs(player.moveStrafing) > 0.0F;
+        boolean movingBackwards = player.moveForward < 0.0F;
+        boolean omniSprint = player.isSprinting() && (movingSideways || movingBackwards) && data.horizontalDelta > 0.12D;
         if (omniSprint) {
-            omniVl++;
-            if (omniVl > 6) {
+            if (omniBuffer.flag(1.0D, 4.0D)) {
                 context.receiveSignal(name, "OmniSprint");
-                omniVl = 0;
+                omniBuffer.reset();
             }
         } else {
-            omniVl = Math.max(0, omniVl - 1);
+            omniBuffer.decay(0.35D);
         }
-        this.omniBuffer.put(name, omniVl);
     }
 
     public void reset() {
-        this.buffer.clear();
-        this.omniBuffer.clear();
+        this.blockSprintBuffers.clear();
+        this.omniSprintBuffers.clear();
     }
 }

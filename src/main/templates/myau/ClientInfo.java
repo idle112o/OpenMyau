@@ -15,9 +15,20 @@ public final class ClientInfo {
     }
 
     public static String getDisplayVersion() {
-        String suffix = GITHUB_BUILD && GIT_COMMIT != null && !GIT_COMMIT.isEmpty() && !"unknown".equalsIgnoreCase(GIT_COMMIT)
-                ? " +" + GIT_COMMIT
-                : "";
-        return NAME + " (" + getBuildChannel() + suffix + ") " + VERSION + " | MC " + MC_VERSION;
+        if (GITHUB_BUILD) {
+            return NAME + " (dev) " + getGitVersion() + " | MC " + MC_VERSION;
+        }
+        return NAME + " (main) " + VERSION + " | MC " + MC_VERSION;
+    }
+
+    public static String getClickGuiVersion() {
+        return GITHUB_BUILD ? getGitVersion() : VERSION;
+    }
+
+    public static String getGitVersion() {
+        String commit = GIT_COMMIT != null && !GIT_COMMIT.isEmpty() && !"unknown".equalsIgnoreCase(GIT_COMMIT)
+                ? GIT_COMMIT
+                : "unknown";
+        return "git-" + commit;
     }
 }

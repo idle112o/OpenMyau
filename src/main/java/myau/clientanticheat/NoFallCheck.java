@@ -6,47 +6,53 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class NoFallCheck {
-    private final Map<String, Float> maxFallDistance = new HashMap<>();
-    private final Map<String, Integer> landingBuffer = new HashMap<>();
+    private final Map<String, Float> trackedFallDistance = new HashMap<>();
+    private final Map<String, CheckBuffer> landingBuffers = new HashMap<>();
 
-    public void check(EntityPlayer player, ClientAntiCheatContext context) {
+    public void check(EntityPlayer player, PlayerCheckData data, ClientAntiCheatContext context) {
         String name = player.getName();
-        if (isExempt(player)) {
+        CheckBuffer buffer = this.landingBuffers.computeIfAbsent(name, key -> new CheckBuffer());
+        if (isExempt(player, data)) {
             reset(name);
             return;
         }
 
-        if (player.fallDistance > 3.2F && !player.onGround) {
-            float max = Math.max(this.maxFallDistance.getOrDefault(name, 0.0F), player.fallDistance);
-            this.maxFallDistance.put(name, max);
+        if (!data.onGround && data.deltaY < 0.0D) {
+            float fall = this.trackedFallDistance.getOrDefault(name, 0.0F) + (float) -data.deltaY;
+            this.trackedFallDistance.put(name, Math.max(fall, player.fallDistance));
+            buffer.decay(0.1D);
             return;
         }
 
-        float trackedFall = this.maxFallDistance.getOrDefault(name, 0.0F);
-        if (trackedFall > 3.2F && player.onGround) {
-            int buffer = this.landingBuffer.getOrDefault(name, 0);
+        float fall = this.trackedFallDistance.getOrDefault(name, 0.0F);
+        boolean landed = data.onGround && !data.lastOnGround;
+        if (landed && fall > 3.1F) {
             boolean noDamage = player.hurtTime == 0 && player.hurtResistantTime <= 10;
-            if (noDamage) {
-                buffer++;
-                if (buffer >= 2) {
+            boolean suspiciousReset = player.fallDistance < 0.5F || fall - player.fallDistance > 2.0F;
+            if (noDamage && suspiciousReset) {
+                if (buffer.flag(1.0D + Math.min(1.0D, fall / 8.0F), 2.0D)) {
                     context.receiveSignal(name, "NoFall");
                     reset(name);
                     return;
                 }
             } else {
-                reset(name);
-                return;
+                buffer.decay(0.75D);
             }
-            this.landingBuffer.put(name, buffer);
-        } else if (trackedFall == 0.0F) {
-            this.landingBuffer.remove(name);
+        } else {
+            buffer.decay(0.25D);
+        }
+
+        if (data.onGround) {
+            this.trackedFallDistance.remove(name);
         }
     }
 
-    private boolean isExempt(EntityPlayer player) {
+    private boolean isExempt(EntityPlayer player, PlayerCheckData data) {
         return player == null
+                || data == null
                 || player.isDead
                 || player.ticksExisted < 20
+                || data.recentlyTeleported()
                 || player.isInWater()
                 || player.isInLava()
                 || player.isOnLadder()
@@ -56,12 +62,12 @@ public class NoFallCheck {
     }
 
     private void reset(String name) {
-        this.maxFallDistance.remove(name);
-        this.landingBuffer.remove(name);
+        this.trackedFallDistance.remove(name);
+        this.landingBuffers.remove(name);
     }
 
     public void reset() {
-        this.maxFallDistance.clear();
-        this.landingBuffer.clear();
+        this.trackedFallDistance.clear();
+        this.landingBuffers.clear();
     }
 }

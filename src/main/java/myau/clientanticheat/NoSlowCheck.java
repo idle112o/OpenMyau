@@ -13,41 +13,55 @@ import java.util.Map;
 
 public class NoSlowCheck {
     private final Map<String, Long> usingTicks = new HashMap<>();
-    private final Map<String, Integer> sprintBuffer = new HashMap<>();
-    private final Map<String, Integer> speedBuffer = new HashMap<>();
+    private final Map<String, CheckBuffer> sprintBuffers = new HashMap<>();
+    private final Map<String, CheckBuffer> speedBuffers = new HashMap<>();
 
     public void check(EntityPlayer player, long currentTick, ClientAntiCheatContext context) {
+        // Kept for compatibility with existing call sites.
+        check(player, null, currentTick, context);
+    }
+
+    public void check(EntityPlayer player, PlayerCheckData data, long currentTick, ClientAntiCheatContext context) {
         String name = player.getName();
         ItemStack heldItem = player.getHeldItem();
         boolean usingSlowItem = this.isSlowItem(heldItem) && (player.isBlocking() || player.isEating() || player.isUsingItem());
-        double horizontalSpeed = Math.sqrt(player.motionX * player.motionX + player.motionZ * player.motionZ);
+        CheckBuffer sprintBuffer = this.sprintBuffers.computeIfAbsent(name, key -> new CheckBuffer());
+        CheckBuffer speedBuffer = this.speedBuffers.computeIfAbsent(name, key -> new CheckBuffer());
         boolean exempt = player.hurtTime > 0
                 || player.hurtResistantTime > 10
                 || player.isCollidedHorizontally
                 || player.isInWater()
                 || player.isInLava()
                 || player.isOnLadder()
-                || player.isRiding();
+                || player.isRiding()
+                || data != null && data.recentlyTeleported();
 
         if (usingSlowItem && !exempt) {
             this.usingTicks.putIfAbsent(name, currentTick);
             long ticksUsing = currentTick - this.usingTicks.get(name);
             if (ticksUsing > 5 && player.isSprinting()) {
-                this.buffer(name, this.sprintBuffer, 3, context);
+                if (sprintBuffer.flag(1.0D, 2.5D)) {
+                    context.receiveSignal(name, "Noslow");
+                    sprintBuffer.reset();
+                }
             } else {
-                this.decay(name, this.sprintBuffer);
+                sprintBuffer.decay(0.4D);
             }
 
-            double maxExpected = player.onGround ? 0.20D : 0.28D;
+            double horizontalSpeed = data != null ? data.horizontalDelta : Math.sqrt(player.motionX * player.motionX + player.motionZ * player.motionZ);
+            double maxExpected = player.onGround ? 0.205D : 0.285D;
             if (ticksUsing > 7 && horizontalSpeed > maxExpected && player.hurtTime == 0) {
-                this.buffer(name, this.speedBuffer, 4, context);
+                if (speedBuffer.flag(1.0D + Math.min(1.0D, horizontalSpeed - maxExpected), 3.5D)) {
+                    context.receiveSignal(name, "Noslow");
+                    speedBuffer.reset();
+                }
             } else {
-                this.decay(name, this.speedBuffer);
+                speedBuffer.decay(0.35D);
             }
         } else {
             this.usingTicks.remove(name);
-            this.decay(name, this.sprintBuffer);
-            this.decay(name, this.speedBuffer);
+            sprintBuffer.decay(0.5D);
+            speedBuffer.decay(0.5D);
         }
     }
 
@@ -62,25 +76,9 @@ public class NoSlowCheck {
                 || stack.getItem() instanceof ItemBlock;
     }
 
-    private void buffer(String name, Map<String, Integer> bufferMap, int threshold, ClientAntiCheatContext context) {
-        int buffer = bufferMap.getOrDefault(name, 0) + 1;
-        if (buffer >= threshold) {
-            context.receiveSignal(name, "Noslow");
-            buffer = 0;
-        }
-        bufferMap.put(name, buffer);
-    }
-
-    private void decay(String name, Map<String, Integer> bufferMap) {
-        int buffer = bufferMap.getOrDefault(name, 0);
-        if (buffer > 0) {
-            bufferMap.put(name, buffer - 1);
-        }
-    }
-
     public void reset() {
         this.usingTicks.clear();
-        this.sprintBuffer.clear();
-        this.speedBuffer.clear();
+        this.sprintBuffers.clear();
+        this.speedBuffers.clear();
     }
 }

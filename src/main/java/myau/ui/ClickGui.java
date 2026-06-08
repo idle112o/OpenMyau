@@ -4,6 +4,7 @@ package myau.ui;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import myau.ClientInfo;
 import myau.Myau;
 import myau.module.Module;
 import myau.module.modules.*;
@@ -187,7 +188,7 @@ public class ClickGui extends GuiScreen {
     public void drawScreen(int x, int y, float p) {
         drawRect(0, 0, this.width, this.height, new Color(0, 0, 0, 100).getRGB());
 
-        mc.fontRendererObj.drawStringWithShadow("Myau " + Myau.version, 4,
+        mc.fontRendererObj.drawStringWithShadow(ClientInfo.getClickGuiVersion(), 4,
                 this.height - 3 - mc.fontRendererObj.FONT_HEIGHT * 2, new Color(60, 162, 253).getRGB());
         mc.fontRendererObj.drawStringWithShadow("dev, ksyz, idle", 4, this.height - 3 - mc.fontRendererObj.FONT_HEIGHT,
                 new Color(60, 162, 253).getRGB());
