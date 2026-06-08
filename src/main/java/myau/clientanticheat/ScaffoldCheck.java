@@ -14,63 +14,64 @@ import java.util.Map;
 import java.util.UUID;
 
 public class ScaffoldCheck {
-    private final Map<UUID, Integer> supportBuffer = new HashMap<>();
-    private final Map<UUID, Integer> rotationBuffer = new HashMap<>();
-    private final Map<UUID, Integer> pitchBuffer = new HashMap<>();
-    private final Map<UUID, Float> lastYaw = new HashMap<>();
-    private final Map<UUID, Float> lastPitch = new HashMap<>();
+    private final Map<UUID, CheckBuffer> supportBuffers = new HashMap<>();
+    private final Map<UUID, CheckBuffer> rotationBuffers = new HashMap<>();
+    private final Map<UUID, CheckBuffer> pitchBuffers = new HashMap<>();
     private final Map<UUID, Long> lastFlag = new HashMap<>();
 
     public void check(EntityPlayer player, World world, ClientAntiCheatContext context) {
+        check(player, world, null, context);
+    }
+
+    public void check(EntityPlayer player, World world, PlayerCheckData data, ClientAntiCheatContext context) {
         UUID uuid = player.getUniqueID();
         ItemStack held = player.getHeldItem();
         boolean holdingBlock = held != null && held.getItem() instanceof ItemBlock;
-        double horizontalSpeed = Math.sqrt(player.motionX * player.motionX + player.motionZ * player.motionZ);
+        CheckBuffer supportBuffer = this.supportBuffers.computeIfAbsent(uuid, key -> new CheckBuffer());
+        CheckBuffer rotationBuffer = this.rotationBuffers.computeIfAbsent(uuid, key -> new CheckBuffer());
+        CheckBuffer pitchBuffer = this.pitchBuffers.computeIfAbsent(uuid, key -> new CheckBuffer());
+        if (!holdingBlock || player.isInWater() || player.isInLava() || player.isOnLadder() || data != null && data.recentlyTeleported()) {
+            supportBuffer.decay(0.5D);
+            rotationBuffer.decay(0.5D);
+            pitchBuffer.decay(0.5D);
+            return;
+        }
+
+        double horizontalSpeed = data != null ? data.horizontalDelta : Math.sqrt(player.motionX * player.motionX + player.motionZ * player.motionZ);
         boolean movingFast = horizontalSpeed > 0.15D;
-        boolean airborne = !player.onGround;
-        boolean falling = player.motionY < -0.08D;
+        boolean airborne = data != null ? !data.onGround : !player.onGround;
+        boolean falling = data != null ? data.deltaY < -0.08D : player.motionY < -0.08D;
         boolean supportBelow = this.hasSupportBelow(player, world);
 
-        int supportVl = this.supportBuffer.getOrDefault(uuid, 0);
-        if (holdingBlock && airborne && falling && movingFast && supportBelow) {
-            supportVl += 2;
+        if (airborne && falling && movingFast && supportBelow) {
+            supportBuffer.flag(1.4D, 999.0D);
         } else {
-            supportVl = Math.max(0, supportVl - 1);
+            supportBuffer.decay(0.35D);
         }
-        this.supportBuffer.put(uuid, supportVl);
 
-        float yaw = player.rotationYaw;
-        float pitch = player.rotationPitch;
-        float yawDiff = Math.abs(MathHelper.wrapAngleTo180_float(yaw - this.lastYaw.getOrDefault(uuid, yaw)));
-        float pitchDiff = Math.abs(pitch - this.lastPitch.getOrDefault(uuid, pitch));
-        this.lastYaw.put(uuid, yaw);
-        this.lastPitch.put(uuid, pitch);
-
-        int rotationVl = this.rotationBuffer.getOrDefault(uuid, 0);
-        if (holdingBlock && movingFast && (yawDiff > 105.0F || pitchDiff > 32.0F)) {
-            rotationVl += 2;
+        float yawDiff = data != null ? data.yawDelta : 0.0F;
+        float pitchDiff = data != null ? data.pitchDelta : 0.0F;
+        if (movingFast && (yawDiff > 105.0F || pitchDiff > 32.0F)) {
+            rotationBuffer.flag(1.5D, 999.0D);
         } else {
-            rotationVl = Math.max(0, rotationVl - 1);
+            rotationBuffer.decay(0.35D);
         }
-        this.rotationBuffer.put(uuid, rotationVl);
 
-        int pitchVl = this.pitchBuffer.getOrDefault(uuid, 0);
-        if (holdingBlock && movingFast && pitch > 65.0F && pitchDiff < 1.0F && supportBelow) {
-            pitchVl++;
+        if (movingFast && player.rotationPitch > 65.0F && pitchDiff < 1.0F && supportBelow) {
+            pitchBuffer.flag(1.0D, 999.0D);
         } else {
-            pitchVl = Math.max(0, pitchVl - 1);
+            pitchBuffer.decay(0.25D);
         }
-        this.pitchBuffer.put(uuid, pitchVl);
 
-        if ((supportVl > 10 && rotationVl > 3) || (supportVl > 12 && pitchVl > 8)) {
+        if ((supportBuffer.get() > 7.0D && rotationBuffer.get() > 2.5D) || (supportBuffer.get() > 8.0D && pitchBuffer.get() > 6.0D)) {
             long now = System.currentTimeMillis();
             long last = this.lastFlag.getOrDefault(uuid, 0L);
             if (now - last > 3000L) {
                 context.receiveSignal(player.getName(), "Scaffold");
                 this.lastFlag.put(uuid, now);
-                this.supportBuffer.put(uuid, 0);
-                this.rotationBuffer.put(uuid, 0);
-                this.pitchBuffer.put(uuid, 0);
+                supportBuffer.reset();
+                rotationBuffer.reset();
+                pitchBuffer.reset();
             }
         }
     }
@@ -93,11 +94,9 @@ public class ScaffoldCheck {
     }
 
     public void reset() {
-        this.supportBuffer.clear();
-        this.rotationBuffer.clear();
-        this.pitchBuffer.clear();
-        this.lastYaw.clear();
-        this.lastPitch.clear();
+        this.supportBuffers.clear();
+        this.rotationBuffers.clear();
+        this.pitchBuffers.clear();
         this.lastFlag.clear();
     }
 }

@@ -7,32 +7,27 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class AimDuplicateLookCheck {
-    private final Map<String, Float> lastYaw = new HashMap<>();
-    private final Map<String, Float> lastPitch = new HashMap<>();
-    private final Map<String, Integer> duplicateBuffer = new HashMap<>();
+    private final Map<String, CheckBuffer> duplicateBuffers = new HashMap<>();
 
     public void check(EntityPlayer player, World world, ClientAntiCheatContext context) {
-        String name = player.getName();
-        float yaw = player.rotationYaw;
-        float pitch = player.rotationPitch;
-        boolean duplicate = this.lastYaw.containsKey(name)
-                && Float.compare(this.lastYaw.get(name), yaw) == 0
-                && Float.compare(this.lastPitch.get(name), pitch) == 0;
-        this.lastYaw.put(name, yaw);
-        this.lastPitch.put(name, pitch);
+        check(player, world, null, context);
+    }
 
-        boolean combat = player.swingProgress > 0 && this.hasNearbyTarget(player, world);
-        int buffer = this.duplicateBuffer.getOrDefault(name, 0);
-        if (duplicate && combat) {
-            buffer++;
-            if (buffer > 8) {
+    public void check(EntityPlayer player, World world, PlayerCheckData data, ClientAntiCheatContext context) {
+        if (data == null || data.recentlyTeleported()) return;
+        String name = player.getName();
+        CheckBuffer buffer = this.duplicateBuffers.computeIfAbsent(name, key -> new CheckBuffer());
+        boolean duplicate = data.yawDelta == 0.0F && data.pitchDelta == 0.0F;
+        boolean combat = player.swingProgress > 0.0F && this.hasNearbyTarget(player, world);
+        boolean suspicious = duplicate && combat && data.horizontalDelta > 0.03D && player.ticksExisted > 40;
+        if (suspicious) {
+            if (buffer.flag(1.0D, 7.0D)) {
                 context.receiveSignal(name, "AimDuplicateLook");
-                buffer = 0;
+                buffer.reset();
             }
         } else {
-            buffer = Math.max(0, buffer - 1);
+            buffer.decay(0.45D);
         }
-        this.duplicateBuffer.put(name, buffer);
     }
 
     private boolean hasNearbyTarget(EntityPlayer player, World world) {
@@ -43,8 +38,6 @@ public class AimDuplicateLookCheck {
     }
 
     public void reset() {
-        this.lastYaw.clear();
-        this.lastPitch.clear();
-        this.duplicateBuffer.clear();
+        this.duplicateBuffers.clear();
     }
 }

@@ -6,39 +6,37 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class AimModulo360Check {
-    private final Map<String, Float> lastYaw = new HashMap<>();
     private final Map<String, Float> lastDeltaYaw = new HashMap<>();
-    private final Map<String, Integer> buffer = new HashMap<>();
+    private final Map<String, CheckBuffer> buffers = new HashMap<>();
 
     public void check(EntityPlayer player, ClientAntiCheatContext context) {
-        String name = player.getName();
-        float yaw = player.rotationYaw;
-        if (!this.lastYaw.containsKey(name)) {
-            this.lastYaw.put(name, yaw);
-            this.lastDeltaYaw.put(name, 0.0F);
-            return;
-        }
+        check(player, null, context);
+    }
 
-        float delta = yaw - this.lastYaw.get(name);
+    public void check(EntityPlayer player, PlayerCheckData data, ClientAntiCheatContext context) {
+        String name = player.getName();
+        CheckBuffer buffer = this.buffers.computeIfAbsent(name, key -> new CheckBuffer());
+        float delta = data != null ? data.yaw - data.lastYaw : 0.0F;
+        float wrapped = data != null ? data.yawDelta : Math.abs(delta);
         float lastDelta = this.lastDeltaYaw.getOrDefault(name, 0.0F);
-        int vl = this.buffer.getOrDefault(name, 0);
-        if (yaw < 360.0F && yaw > -360.0F && Math.abs(delta) > 320.0F && Math.abs(lastDelta) < 30.0F) {
-            vl++;
-            if (vl > 1) {
+        boolean moduloSnap = data != null
+                && Math.abs(delta) > 320.0F
+                && wrapped < 45.0F
+                && Math.abs(lastDelta) < 45.0F
+                && !data.recentlyTeleported();
+        if (moduloSnap) {
+            if (buffer.flag(1.0D, 1.5D)) {
                 context.receiveSignal(name, "AimModulo360");
-                vl = 0;
+                buffer.reset();
             }
         } else {
-            vl = Math.max(0, vl - 1);
+            buffer.decay(0.35D);
         }
-        this.buffer.put(name, vl);
-        this.lastYaw.put(name, yaw);
         this.lastDeltaYaw.put(name, delta);
     }
 
     public void reset() {
-        this.lastYaw.clear();
         this.lastDeltaYaw.clear();
-        this.buffer.clear();
+        this.buffers.clear();
     }
 }

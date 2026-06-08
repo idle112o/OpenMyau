@@ -98,13 +98,13 @@ public class HackerDetector extends Module implements ClientAntiCheatContext {
                 this.killAuraCheck.check(player, world, currentTick, this);
             }
             if (this.scaffold.getValue()) {
-                this.scaffoldCheck.check(player, world, this);
+                this.scaffoldCheck.check(player, world, data, this);
             }
             if (this.aimDuplicateLook.getValue()) {
-                this.aimDuplicateLookCheck.check(player, world, this);
+                this.aimDuplicateLookCheck.check(player, world, data, this);
             }
             if (this.aimModulo360.getValue()) {
-                this.aimModulo360Check.check(player, this);
+                this.aimModulo360Check.check(player, data, this);
             }
             if (this.reach.getValue()) {
                 this.reachCheck.check(player, world, data, this);
