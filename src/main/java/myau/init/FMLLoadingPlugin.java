@@ -42,7 +42,8 @@ public class FMLLoadingPlugin implements IMixinConfigPlugin {
             }
         } else if (string.endsWith(".class")) {
             try {
-                return new URL(string.replace("\\", "/").replace(this.getClass().getCanonicalName().replace(".", "/") + ".class", ""));
+                return new URL(string.replace("\\", "/")
+                        .replace(this.getClass().getCanonicalName().replace(".", "/") + ".class", ""));
             } catch (MalformedURLException e) {
                 throw new RuntimeException(e);
             }
@@ -60,9 +61,13 @@ public class FMLLoadingPlugin implements IMixinConfigPlugin {
     }
 
     public void tryAddMixinClass(String className) {
-        String norm = (className.endsWith(".class") ? className.substring(0, className.length() - ".class".length()) : className).replace("\\", "/").replace("/", ".");
+        String norm = (className.endsWith(".class") ? className.substring(0, className.length() - ".class".length())
+                : className).replace("\\", "/").replace("/", ".");
         if (norm.startsWith(this.getMixinPackage() + ".") && !norm.endsWith(".")) {
-            this.mixins.add(norm.substring(this.getMixinPackage().length() + 1));
+            String mixinName = norm.substring(this.getMixinPackage().length() + 1);
+            if (!"ITruePosition".equals(mixinName)) {
+                this.mixins.add(mixinName);
+            }
         }
     }
 

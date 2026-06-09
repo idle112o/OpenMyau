@@ -3,10 +3,10 @@ package myau.module.modules;
 import myau.Myau;
 import myau.event.EventTarget;
 import myau.event.types.EventType;
+import myau.events.MoveInputEvent;
 import myau.events.PacketEvent;
 import myau.events.Render3DEvent;
 import myau.events.TickEvent;
-import myau.events.UpdateEvent;
 import myau.module.Module;
 import myau.property.properties.BooleanProperty;
 import myau.property.properties.ColorProperty;
@@ -82,27 +82,29 @@ public class TickBase extends Module {
 
     @EventTarget
     public void onTick(TickEvent event) {
-        if (!this.isEnabled() || event.getType() != EventType.PRE || mc.thePlayer == null || mc.theWorld == null) return;
+        if (!this.isEnabled() || mc.thePlayer == null || mc.theWorld == null) return;
         if (mc.thePlayer.ridingEntity != null || isBlinkEnabled()) return;
+
+        if (event.getType() == EventType.PRE && ticksToSkip-- > 0) {
+            event.setCancelled(true);
+            return;
+        }
+
+        if (event.getType() != EventType.POST) return;
 
         if (modificationFlag) {
             modificationFlag = false;
             duringTickModification = false;
         }
 
-        if (ticksToSkip > 0) {
-            ticksToSkip--;
-            return;
-        }
-
-        updateSimulationBuffer();
         runTickBaseIfPossible();
     }
 
     @EventTarget
-    public void onUpdate(UpdateEvent event) {
-        if (!this.isEnabled() || event.getType() != EventType.PRE || mc.thePlayer == null) return;
+    public void onMoveInput(MoveInputEvent event) {
+        if (!this.isEnabled() || mc.thePlayer == null || mc.theWorld == null) return;
         if (mc.thePlayer.ridingEntity != null || isBlinkEnabled()) return;
+        updateSimulationBuffer();
     }
 
     @EventTarget
@@ -110,7 +112,6 @@ public class TickBase extends Module {
         if (!this.isEnabled() || !pauseOnFlag.getValue()) return;
         if (event.getPacket() instanceof S08PacketPlayerPosLook) {
             tickBalance = 0.0F;
-            reachedTheLimit = true;
             ticksToSkip = 0;
         }
     }
@@ -245,7 +246,7 @@ public class TickBase extends Module {
         }
 
         int selectedTick = criticalTick != -1 ? criticalTick : bestTick;
-        if (selectedTick <= 0) return;
+        if (selectedTick == 0) return;
         if (RandomUtil.nextInt(0, 100) > change.getValue() || (onlyOnKillAura.getValue() && !isKillAuraActive())) {
             ticksToSkip = 0;
             return;

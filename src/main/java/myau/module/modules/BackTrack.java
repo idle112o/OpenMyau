@@ -8,6 +8,7 @@ import myau.events.PacketEvent;
 import myau.events.Render3DEvent;
 import myau.events.TickEvent;
 import myau.module.Module;
+import myau.util.ITruePosition;
 import myau.property.properties.BooleanProperty;
 import myau.property.properties.ColorProperty;
 import myau.property.properties.FloatProperty;
@@ -17,6 +18,8 @@ import myau.util.PacketUtil;
 import myau.util.RandomUtil;
 import myau.util.RotationUtil;
 import myau.util.TimerUtil;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.entity.EntityOtherPlayerMP;
 import net.minecraft.client.network.NetworkPlayerInfo;
@@ -30,15 +33,18 @@ import net.minecraft.network.Packet;
 import net.minecraft.network.handshake.client.C00Handshake;
 import net.minecraft.network.play.INetHandlerPlayClient;
 import net.minecraft.network.play.client.C02PacketUseEntity;
+import net.minecraft.network.play.server.S00PacketKeepAlive;
 import net.minecraft.network.play.server.S02PacketChat;
 import net.minecraft.network.play.server.S06PacketUpdateHealth;
 import net.minecraft.network.play.server.S08PacketPlayerPosLook;
+import net.minecraft.network.play.server.S12PacketEntityVelocity;
 import net.minecraft.network.play.server.S13PacketDestroyEntities;
 import net.minecraft.network.play.server.S14PacketEntity;
 import net.minecraft.network.play.server.S18PacketEntityTeleport;
 import net.minecraft.network.play.server.S19PacketEntityStatus;
 import net.minecraft.network.play.server.S1CPacketEntityMetadata;
 import net.minecraft.network.play.server.S29PacketSoundEffect;
+import net.minecraft.network.play.server.S32PacketConfirmTransaction;
 import net.minecraft.network.play.server.S40PacketDisconnect;
 import net.minecraft.network.status.client.C00PacketServerQuery;
 import net.minecraft.network.status.server.S01PacketPong;
@@ -56,7 +62,9 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 
 public class BackTrack extends Module {
     private static final Minecraft mc = Minecraft.getMinecraft();
+    private static final Logger LOGGER = LogManager.getLogger("BackTrack");
     private static final String[] NON_DELAYED_SOUND_SUBSTRINGS = new String[]{"game.player.hurt", "game.player.die"};
+    private static final long MAX_QUEUE_TIME = 1000L;
 
     public final ModeProperty mode = new ModeProperty("mode", 0, new String[]{"PACKET", "FAKE_PLAYER"});
     public final IntProperty nextBacktrackDelay = new IntProperty("next-backtrack-delay", 0, 0, 2000, () -> mode.getValue() == 0);
@@ -146,15 +154,20 @@ public class BackTrack extends Module {
         }
 
         Packet<?> packet = event.getPacket();
-        if (isIgnoredPacket(packet)) return;
-        if (isFlushPacket(packet)) {
+        if (mc.isSingleplayer() || mc.getCurrentServerData() == null) {
             clearPackets(true, true);
             reset();
             return;
         }
         if (packetQueue.isEmpty() && !shouldBacktrack()) return;
+        if (isIgnoredPacket(packet) || isCriticalSyncPacket(packet)) return;
+        if (isFlushPacket(packet)) {
+            clearPackets(true, true);
+            reset();
+            return;
+        }
 
-        trackPosition(packet);
+        trackTruePosition(packet);
         event.setCancelled(true);
         packetQueue.offer(new QueuedPacket(packet, System.currentTimeMillis()));
     }
@@ -236,7 +249,7 @@ public class BackTrack extends Module {
             if (trueDist <= 6.0D && (!smart.getValue() || trueDist >= clientDist)
                     && (style.getValue() == 1 || !globalTimer.hasTimeElapsed(modernDelay))) {
                 shouldRender = true;
-                if (isTargetInConfiguredRange(target.getEntityBoundingBox())) {
+                if (isTargetInConfiguredRange(getTrackedBoundingBox())) {
                     handlePackets();
                 } else {
                     handlePacketsRange();
@@ -262,6 +275,7 @@ public class BackTrack extends Module {
             }
         }
         positions.removeIf(position -> position.time < releaseTime);
+        flushExpiredPackets();
     }
 
     private void handlePacketsRange() {
@@ -279,6 +293,7 @@ public class BackTrack extends Module {
             }
         }
         positions.removeIf(position -> position.time < time);
+        flushExpiredPackets();
     }
 
     private long getRangeTime() {
@@ -331,6 +346,14 @@ public class BackTrack extends Module {
         return false;
     }
 
+    private boolean isCriticalSyncPacket(Packet<?> packet) {
+        if (packet instanceof S00PacketKeepAlive || packet instanceof S32PacketConfirmTransaction) return true;
+        if (packet instanceof S12PacketEntityVelocity && mc.thePlayer != null) {
+            return ((S12PacketEntityVelocity) packet).getEntityID() == mc.thePlayer.getEntityId();
+        }
+        return false;
+    }
+
     private boolean isFlushPacket(Packet<?> packet) {
         if (packet instanceof S08PacketPlayerPosLook || packet instanceof S40PacketDisconnect) return true;
         if (packet instanceof S06PacketUpdateHealth && ((S06PacketUpdateHealth) packet).getHealth() <= 0.0F) return true;
@@ -360,36 +383,49 @@ public class BackTrack extends Module {
         return false;
     }
 
-    private void trackPosition(Packet<?> packet) {
-        if (target == null) return;
+    private void trackTruePosition(Packet<?> packet) {
+        if (target == null || mc.theWorld == null) return;
+        int entityId = -1;
         if (packet instanceof S14PacketEntity) {
-            S14PacketEntity movement = (S14PacketEntity) packet;
-            Entity entity = movement.getEntity(mc.theWorld);
-            if (entity != null && entity.getEntityId() == target.getEntityId()) {
-                double x = (target.serverPosX + movement.func_149062_c()) / 32.0D;
-                double y = (target.serverPosY + movement.func_149061_d()) / 32.0D;
-                double z = (target.serverPosZ + movement.func_149064_e()) / 32.0D;
-                positions.offer(new TimedPosition(new Vec3(x, y, z), System.currentTimeMillis()));
-            }
+            Entity entity = ((S14PacketEntity) packet).getEntity(mc.theWorld);
+            if (entity != null) entityId = entity.getEntityId();
         } else if (packet instanceof S18PacketEntityTeleport) {
-            S18PacketEntityTeleport teleport = (S18PacketEntityTeleport) packet;
-            if (teleport.getEntityId() == target.getEntityId()) {
-                positions.offer(new TimedPosition(new Vec3(teleport.getX() / 32.0D, teleport.getY() / 32.0D, teleport.getZ() / 32.0D), System.currentTimeMillis()));
-            }
+            entityId = ((S18PacketEntityTeleport) packet).getEntityId();
         }
+        if (entityId != target.getEntityId()) return;
+
+        ITruePosition accessor = getTargetAccessor();
+        if (accessor == null) return;
+        positions.offer(new TimedPosition(new Vec3(accessor.getTrueX(), accessor.getTrueY(), accessor.getTrueZ()), System.currentTimeMillis()));
     }
 
     private double getTrueDistance() {
+        ITruePosition accessor = getTargetAccessor();
+        if (accessor != null && accessor.isTruePos() && mc.thePlayer != null) {
+            return mc.thePlayer.getDistance(accessor.getTrueX(), accessor.getTrueY(), accessor.getTrueZ());
+        }
         TimedPosition latest = getLatestPosition();
         if (latest == null || mc.thePlayer == null) return target.getDistanceToEntity(mc.thePlayer);
         return mc.thePlayer.getDistance(latest.position.xCoord, latest.position.yCoord, latest.position.zCoord);
     }
 
     private boolean isTargetInConfiguredRange(AxisAlignedBB box) {
+        if (box == null) return false;
         double distance = RotationUtil.distanceToBox(box);
         float min = Math.min(minDistance.getValue(), maxDistance.getValue());
         float max = Math.max(minDistance.getValue(), maxDistance.getValue());
         return distance >= min && distance <= max;
+    }
+
+    private AxisAlignedBB getTrackedBoundingBox() {
+        if (target == null) return null;
+        TimedPosition position = getLatestPosition();
+        if (position == null) return target.getEntityBoundingBox();
+        return target.getEntityBoundingBox().offset(
+                position.position.xCoord - target.posX,
+                position.position.yCoord - target.posY,
+                position.position.zCoord - target.posZ
+        );
     }
 
     private AxisAlignedBB createRenderBox(Vec3 position) {
@@ -408,9 +444,18 @@ public class BackTrack extends Module {
             latest = position;
         }
         if (latest == null && target != null) {
-            latest = new TimedPosition(new Vec3(target.posX, target.posY, target.posZ), System.currentTimeMillis());
+            ITruePosition accessor = getTargetAccessor();
+            if (accessor != null && accessor.isTruePos()) {
+                latest = new TimedPosition(new Vec3(accessor.getTrueX(), accessor.getTrueY(), accessor.getTrueZ()), System.currentTimeMillis());
+            } else {
+                latest = new TimedPosition(new Vec3(target.posX, target.posY, target.posZ), System.currentTimeMillis());
+            }
         }
         return latest;
+    }
+
+    private ITruePosition getTargetAccessor() {
+        return target instanceof ITruePosition ? (ITruePosition) target : null;
     }
 
     private void drawBacktrackBox(AxisAlignedBB box, Color color) {
@@ -465,8 +510,24 @@ public class BackTrack extends Module {
     }
 
     private void receiveQueuedPacket(Packet<?> packet) {
-        if (packet == null || mc.getNetHandler() == null) return;
-        PacketUtil.handlePacket((Packet<INetHandlerPlayClient>) packet);
+        if (packet == null || mc.getNetHandler() == null || mc.theWorld == null || mc.thePlayer == null) return;
+        try {
+            PacketUtil.handlePacket((Packet<INetHandlerPlayClient>) packet);
+        } catch (RuntimeException exception) {
+            LOGGER.warn("Dropped unsafe delayed BackTrack packet {}", packet.getClass().getSimpleName(), exception);
+        }
+    }
+
+    private void flushExpiredPackets() {
+        long expiry = System.currentTimeMillis() - Math.max(MAX_QUEUE_TIME, Math.max(minMS.getValue(), maxMS.getValue()) + 250L);
+        Iterator<QueuedPacket> packetIterator = packetQueue.iterator();
+        while (packetIterator.hasNext()) {
+            QueuedPacket data = packetIterator.next();
+            if (data.time <= expiry) {
+                receiveQueuedPacket(data.packet);
+                packetIterator.remove();
+            }
+        }
     }
 
     private int randomLatency() {

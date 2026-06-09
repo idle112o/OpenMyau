@@ -65,12 +65,13 @@ public class OnlineConfigClient {
     }
 
     private static String formatError(int code, String body) {
-        String text = body == null ? "" : body
-                .replaceAll("(?is)<style.*?</style>", " ")
-                .replaceAll("(?is)<script.*?</script>", " ")
-                .replaceAll("(?is)<[^>]+>", " ")
-                .replaceAll("\\s+", " ")
-                .trim();
+        String text = body == null ? ""
+                : body
+                        .replaceAll("(?is)<style.*?</style>", " ")
+                        .replaceAll("(?is)<script.*?</script>", " ")
+                        .replaceAll("(?is)<[^>]+>", " ")
+                        .replaceAll("\\s+", " ")
+                        .trim();
         if (text.length() > 180) {
             text = text.substring(0, 180) + "...";
         }

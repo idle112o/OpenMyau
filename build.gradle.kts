@@ -13,6 +13,9 @@ val version: String by project
 val mixinGroup = "$baseGroup.mixin"
 val modid: String by project
 val jarName: String by project
+
+group = baseGroup
+project.version = version
 val gitCommit: String = providers.exec {
     commandLine("git", "rev-parse", "--short", "HEAD")
 }.standardOutput.asText.get().trim().ifEmpty { "unknown" }
@@ -83,6 +86,11 @@ dependencies {
 }
 // Tasks:
 val generateClientInfo by tasks.registering(Copy::class) {
+    inputs.property("version", version)
+    inputs.property("mcversion", mcVersion)
+    inputs.property("gitCommit", gitCommit)
+    inputs.property("githubBuild", githubBuild.toString())
+
     from("src/main/templates")
     into(layout.buildDirectory.dir("generated/sources/clientInfo/java"))
     expand(

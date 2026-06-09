@@ -38,9 +38,12 @@ public class OnlineConfigApplier {
 
     private int applyModule(Module module, JsonObject object) {
         int applied = 0;
-        if (readBoolean(object, "toggled", module::setEnabled)) applied++;
-        if (readInt(object, "key", module::setKey)) applied++;
-        if (readBoolean(object, "hidden", module::setHidden)) applied++;
+        if (readBoolean(object, "toggled", module::setEnabled))
+            applied++;
+        if (readInt(object, "key", module::setKey))
+            applied++;
+        if (readBoolean(object, "hidden", module::setHidden))
+            applied++;
 
         ArrayList<Property<?>> properties = Myau.propertyManager.properties.get(module.getClass());
         if (properties == null) {

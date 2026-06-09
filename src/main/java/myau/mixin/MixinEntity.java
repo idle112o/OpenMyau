@@ -4,6 +4,7 @@ import myau.Myau;
 import myau.event.EventManager;
 import myau.events.KnockbackEvent;
 import myau.events.SafeWalkEvent;
+import myau.util.ITruePosition;
 import net.minecraft.client.entity.EntityPlayerSP;
 import net.minecraft.entity.Entity;
 import net.minecraft.world.World;
@@ -11,6 +12,7 @@ import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.ModifyVariable;
@@ -18,7 +20,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @SideOnly(Side.CLIENT)
 @Mixin(value = {Entity.class}, priority = 9999)
-public abstract class MixinEntity {
+public abstract class MixinEntity implements ITruePosition {
     @Shadow
     public World worldObj;
     @Shadow
@@ -43,6 +45,27 @@ public abstract class MixinEntity {
     public float prevRotationPitch;
     @Shadow
     public boolean onGround;
+
+    @Shadow
+    public int serverPosX;
+
+    @Shadow
+    public int serverPosY;
+
+    @Shadow
+    public int serverPosZ;
+
+    @Unique
+    private double trueX;
+
+    @Unique
+    private double trueY;
+
+    @Unique
+    private double trueZ;
+
+    @Unique
+    private boolean truePos;
 
     @Shadow
     public boolean isRiding() {
@@ -76,6 +99,77 @@ public abstract class MixinEntity {
         if ((Entity) ((Object) this) instanceof EntityPlayerSP && Myau.rotationManager != null && Myau.rotationManager.isRotated()) {
             callbackInfo.cancel();
         }
+    }
+
+    @Inject(method = {"<init>"}, at = {@At("RETURN")})
+    private void initTruePosition(World world, CallbackInfo callbackInfo) {
+        updateTruePositionFromCurrent();
+    }
+
+    @Inject(method = {"setPosition"}, at = {@At("RETURN")})
+    private void setPositionTrue(double x, double y, double z, CallbackInfo callbackInfo) {
+        updateTruePositionFromCurrent();
+    }
+
+    @Inject(method = {"setPositionAndRotation"}, at = {@At("RETURN")})
+    private void setPositionAndRotationTrue(double x, double y, double z, float yaw, float pitch, CallbackInfo callbackInfo) {
+        updateTruePositionFromCurrent();
+    }
+
+    @Inject(method = {"setPositionAndRotation2"}, at = {@At("HEAD")})
+    private void setPositionAndRotation2True(double x, double y, double z, float yaw, float pitch, int increments, boolean teleport, CallbackInfo callbackInfo) {
+        this.trueX = x;
+        this.trueY = y;
+        this.trueZ = z;
+        this.truePos = true;
+    }
+
+    @Unique
+    private void updateTruePositionFromCurrent() {
+        this.trueX = this.posX;
+        this.trueY = this.posY;
+        this.trueZ = this.posZ;
+        this.truePos = true;
+    }
+
+    @Override
+    public double getTrueX() {
+        return this.trueX;
+    }
+
+    @Override
+    public double getTrueY() {
+        return this.trueY;
+    }
+
+    @Override
+    public double getTrueZ() {
+        return this.trueZ;
+    }
+
+    @Override
+    public void setTrueX(double trueX) {
+        this.trueX = trueX;
+    }
+
+    @Override
+    public void setTrueY(double trueY) {
+        this.trueY = trueY;
+    }
+
+    @Override
+    public void setTrueZ(double trueZ) {
+        this.trueZ = trueZ;
+    }
+
+    @Override
+    public boolean isTruePos() {
+        return this.truePos;
+    }
+
+    @Override
+    public void setTruePos(boolean truePos) {
+        this.truePos = truePos;
     }
 
     @ModifyVariable(

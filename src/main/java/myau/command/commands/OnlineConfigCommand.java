@@ -47,7 +47,8 @@ public class OnlineConfigCommand extends Command {
     private void listConfigs() {
         try {
             cache = client.list();
-            ChatUtil.sendFormatted(Myau.clientName + (cache.isEmpty() ? "No online configs found&r" : "Online configs:&r"));
+            ChatUtil.sendFormatted(
+                    Myau.clientName + (cache.isEmpty() ? "No online configs found&r" : "Online configs:&r"));
             for (OnlineConfigEntry entry : cache) {
                 sendEntry(entry);
             }
@@ -65,7 +66,8 @@ public class OnlineConfigCommand extends Command {
             }
             showMetadata(entry);
             int applied = new OnlineConfigApplier().apply(client.load(entry.getId()));
-            ChatUtil.sendFormatted(String.format("%sOnline config loaded (&a&o%s&r) &7- applied %d setting(s)&r", Myau.clientName, entry.getName(), applied));
+            ChatUtil.sendFormatted(String.format("%sOnline config loaded (&a&o%s&r) &7- applied %d setting(s)&r",
+                    Myau.clientName, entry.getName(), applied));
         } catch (Exception e) {
             ChatUtil.sendFormatted(Myau.clientName + "Failed to load online config: &c" + e.getMessage() + "&r");
         }
@@ -85,11 +87,13 @@ public class OnlineConfigCommand extends Command {
 
     private void sendEntry(OnlineConfigEntry entry) {
         String command = ".onlineconfig load " + entry.getId();
-        String line = String.format("§7» §f%s §7[§b%s§7] §7by §a%s", entry.getName(), safe(entry.setting_type), entry.getAuthor());
+        String line = String.format("§7» §f%s §7[§b%s§7] §7by §a%s", entry.getName(), safe(entry.setting_type),
+                entry.getAuthor());
         ChatUtil.send(new ChatComponentText(line).setChatStyle(new ChatStyle()
                 .setChatClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, command))
                 .setChatHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
-                        new ChatComponentText(command + "\n§7id: §f" + entry.getId() + "\n§7status: §f" + safe(entry.status_type))))));
+                        new ChatComponentText(command + "\n§7id: §f" + entry.getId() + "\n§7status: §f"
+                                + safe(entry.status_type))))));
     }
 
     private void showMetadata(OnlineConfigEntry entry) {
@@ -105,7 +109,8 @@ public class OnlineConfigCommand extends Command {
     }
 
     private void usage() {
-        ChatUtil.sendFormatted(Myau.clientName + "Usage: .onlineconfig &olist&r | .onlineconfig &oload&r <&oid/name&r>");
+        ChatUtil.sendFormatted(
+                Myau.clientName + "Usage: .onlineconfig &olist&r | .onlineconfig &oload&r <&oid/name&r>");
     }
 
     private void async(String name, Runnable task) {

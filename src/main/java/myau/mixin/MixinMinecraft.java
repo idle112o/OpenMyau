@@ -54,11 +54,16 @@ public abstract class MixinMinecraft {
 
     @Inject(
             method = {"runTick"},
-            at = {@At("HEAD")}
+            at = {@At("HEAD")},
+            cancellable = true
     )
     private void runTick(CallbackInfo callbackInfo) {
         if (this.theWorld != null && this.thePlayer != null) {
-            EventManager.call(new TickEvent(EventType.PRE));
+            TickEvent event = new TickEvent(EventType.PRE);
+            EventManager.call(event);
+            if (event.isCancelled()) {
+                callbackInfo.cancel();
+            }
         }
     }
 
