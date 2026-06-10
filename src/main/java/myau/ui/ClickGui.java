@@ -47,6 +47,7 @@ public class ClickGui extends GuiScreen {
         combatModules.add(Myau.moduleManager.getModule(Hitflick.class));
         combatModules.add(Myau.moduleManager.getModule(ProjectileAimBot.class));
         combatModules.add(Myau.moduleManager.getModule(TickBase.class));
+        combatModules.add(Myau.moduleManager.getModule(KnockbackDelay.class));
 
         List<Module> movementModules = new ArrayList<>();
         movementModules.add(Myau.moduleManager.getModule(AntiAFK.class));
@@ -88,6 +89,7 @@ public class ClickGui extends GuiScreen {
         renderModules.add(Myau.moduleManager.getModule(Keystrokes.class));
         renderModules.add(Myau.moduleManager.getModule(BlockOverlay.class));
         renderModules.add(Myau.moduleManager.getModule(Radar.class));
+        renderModules.add(Myau.moduleManager.getModule(BreakProgress.class));
 
         List<Module> playerModules = new ArrayList<>();
         playerModules.add(Myau.moduleManager.getModule(AutoHeal.class));
@@ -104,8 +106,8 @@ public class ClickGui extends GuiScreen {
         playerModules.add(Myau.moduleManager.getModule(FastPlace.class));
         playerModules.add(Myau.moduleManager.getModule(GhostHand.class));
         playerModules.add(Myau.moduleManager.getModule(MCF.class));
-        playerModules.add(Myau.moduleManager.getModule(BreakProgress.class));
         playerModules.add(Myau.moduleManager.getModule(AntiDebuff.class));
+        playerModules.add(Myau.moduleManager.getModule(Clutch.class));
 
         List<Module> miscModules = new ArrayList<>();
         miscModules.add(Myau.moduleManager.getModule(AutoAuth.class));

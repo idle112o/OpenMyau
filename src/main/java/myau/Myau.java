@@ -90,6 +90,7 @@ public class Myau {
         moduleManager.modules.put(BlockOverlay.class, new BlockOverlay());
         moduleManager.modules.put(BreakProgress.class, new BreakProgress());
         moduleManager.modules.put(BackTrack.class, new BackTrack());
+        moduleManager.modules.put(Clutch.class, new Clutch());
         moduleManager.modules.put(TickBase.class, new TickBase());
         moduleManager.modules.put(Chams.class, new Chams());
         moduleManager.modules.put(ChestESP.class, new ChestESP());
@@ -118,6 +119,7 @@ public class Myau {
         moduleManager.modules.put(Keystrokes.class, new Keystrokes());
         moduleManager.modules.put(HitBox.class, new HitBox());
         moduleManager.modules.put(KillAura.class, new KillAura());
+        moduleManager.modules.put(KnockbackDelay.class, new KnockbackDelay());
         moduleManager.modules.put(LagRange.class, new LagRange());
         moduleManager.modules.put(LightningTracker.class, new LightningTracker());
         moduleManager.modules.put(LongJump.class, new LongJump());

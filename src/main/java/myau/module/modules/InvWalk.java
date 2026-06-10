@@ -112,6 +112,14 @@ public class InvWalk extends Module {
         }
     }
 
+    private boolean canGuiWalk() {
+        return mc.currentScreen != null && !(mc.currentScreen instanceof GuiContainer) && this.guiEnabled.getValue();
+    }
+
+    private boolean shouldRefreshKeysPostTick() {
+        return this.mode.getValue() == 0 && (this.canInvWalk() || this.canGuiWalk());
+    }
+
     public boolean temporaryStackIsEmpty() {
         if (mc.thePlayer.inventory.getItemStack() != null) return false;
         if (mc.thePlayer.inventoryContainer instanceof ContainerPlayer) {
@@ -145,6 +153,12 @@ public class InvWalk extends Module {
                     PacketUtil.sendPacketNoEvent(new C0DPacketCloseWindow(0));
                 this.closeDelayTicks = -1;
             }
+        } else if (event.getType() == EventType.POST && this.isEnabled() && this.shouldRefreshKeysPostTick()) {
+            if (this.isSetMovementKeys() && this.lockMoveKey.getValue()) {
+                this.restoreMovementKeys();
+            } else {
+                this.pressMovementKeys(true);
+            }
         }
     }
 
@@ -152,7 +166,7 @@ public class InvWalk extends Module {
     public void onUpdate(UpdateEvent event) {
         if (!this.isEnabled() || event.getType() != EventType.PRE) return;
 
-        if (mc.currentScreen instanceof myau.ui.ClickGui && this.guiEnabled.getValue()) {
+        if (this.canGuiWalk()) {
             this.pressMovementKeys(true);
             return;
         }
