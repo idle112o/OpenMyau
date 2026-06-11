@@ -9,7 +9,6 @@ import myau.property.properties.BooleanProperty;
 import myau.property.properties.FloatProperty;
 import myau.property.properties.IntProperty;
 import myau.util.BlockUtil;
-import myau.util.ItemUtil;
 import myau.util.PacketUtil;
 import myau.util.RotationUtil;
 import net.minecraft.block.Block;
@@ -20,7 +19,6 @@ import net.minecraft.init.Blocks;
 import net.minecraft.item.ItemBlock;
 import net.minecraft.item.ItemStack;
 import net.minecraft.network.play.client.C09PacketHeldItemChange;
-import net.minecraft.network.play.client.C0APacketAnimation;
 import net.minecraft.util.*;
 import org.lwjgl.input.Keyboard;
 import org.lwjgl.input.Mouse;
@@ -30,8 +28,6 @@ import java.util.Comparator;
 
 public class Clutch extends Module {
     private static final Minecraft mc = Minecraft.getMinecraft();
-    private static final double HALF_WIDTH = 0.3D;
-    private static final double[][] CORNERS = {{-HALF_WIDTH, -HALF_WIDTH}, {HALF_WIDTH, -HALF_WIDTH}, {-HALF_WIDTH, HALF_WIDTH}, {HALF_WIDTH, HALF_WIDTH}};
 
     public final FloatProperty reach = new FloatProperty("reach", 4.5F, 0.5F, 4.5F);
     public final IntProperty speed = new IntProperty("speed", 8, 0, 100);
@@ -43,8 +39,6 @@ public class Clutch extends Module {
     public final IntProperty minimumFallDistance = new IntProperty("minimum-fall-distance", 10, 3, 20);
     public final IntProperty selectKeybind = new IntProperty("select-keybind", 0, 0, Keyboard.KEYBOARD_SIZE - 1);
 
-    private boolean hasAim;
-    private boolean resetting;
     private boolean placing;
     private boolean slotWasSwapped;
     private boolean autoClickerWasOn;
@@ -100,8 +94,6 @@ public class Clutch extends Module {
         this.aimPitch = result.pitch;
         this.targetPos = result.ray.getBlockPos();
         this.targetSide = result.ray.sideHit;
-        this.hasAim = true;
-        this.resetting = false;
         this.enablePlacing();
         this.equipPlannedSlot();
 
@@ -234,8 +226,6 @@ public class Clutch extends Module {
     }
 
     private void clearAim(boolean restore) {
-        this.hasAim = false;
-        this.resetting = false;
         this.placing = false;
         this.targetPos = null;
         this.targetSide = null;

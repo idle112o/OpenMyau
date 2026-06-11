@@ -445,9 +445,7 @@ public class BedwarUtils extends Module {
         private long lastMarcoTime;
         private boolean waiting;
         private long bedScanAt;
-        private long lastBedScanAttempt;
         private boolean scannedThisGame;
-        private long lastAutoIncTime;
         public final BooleanProperty alerts;
         public final IntProperty alertRange;
         public final BooleanProperty alertOnPearl;
@@ -509,9 +507,7 @@ public class BedwarUtils extends Module {
             this.lastMarcoTime = -1L;
             this.waiting = false;
             this.bedScanAt = -1L;
-            this.lastBedScanAttempt = -1L;
             this.scannedThisGame = false;
-            this.lastAutoIncTime = -1L;
             this.alerts = new BooleanProperty("alerts", true, BedwarUtils.this.bedTracker::getValue);
             this.alertRange = new IntProperty("alerts-range", 48, 8, 128,
                     () -> BedwarUtils.this.bedTracker.getValue() && this.alerts.getValue());
@@ -555,8 +551,6 @@ public class BedwarUtils extends Module {
             this.autoIncPlayers.clear();
             this.bedPos = null;
             this.lastMarcoTime = -1L;
-            this.lastBedScanAttempt = -1L;
-            this.lastAutoIncTime = -1L;
         }
 
         private BlockPos getBedPos() {
@@ -582,7 +576,6 @@ public class BedwarUtils extends Module {
                 return;
             }
             this.bedScanAt = -1L;
-            this.lastBedScanAttempt = System.currentTimeMillis();
             if (mc.theWorld == null || mc.thePlayer == null) {
                 this.bedScanAt = System.currentTimeMillis() + BED_RESCAN_DELAY_MS;
                 return;

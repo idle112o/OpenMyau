@@ -14,21 +14,10 @@ import myau.module.Module;
 import myau.property.properties.*;
 import myau.util.*;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.entity.EntityOtherPlayerMP;
 import net.minecraft.client.gui.inventory.GuiContainer;
 import net.minecraft.entity.DataWatcher.WatchableObject;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityLivingBase;
-import net.minecraft.entity.boss.EntityDragon;
-import net.minecraft.entity.boss.EntityWither;
-import net.minecraft.entity.monster.EntityIronGolem;
-import net.minecraft.entity.monster.EntityMob;
-import net.minecraft.entity.monster.EntitySilverfish;
-import net.minecraft.entity.monster.EntitySlime;
-import net.minecraft.entity.passive.EntityAnimal;
-import net.minecraft.entity.passive.EntityBat;
-import net.minecraft.entity.passive.EntitySquid;
-import net.minecraft.entity.passive.EntityVillager;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.ItemSword;
@@ -88,13 +77,6 @@ public class KillAura extends Module {
     public final BooleanProperty weaponsOnly;
     public final BooleanProperty allowTools;
     public final BooleanProperty inventoryCheck;
-    public final BooleanProperty players;
-    public final BooleanProperty bosses;
-    public final BooleanProperty mobs;
-    public final BooleanProperty animals;
-    public final BooleanProperty golems;
-    public final BooleanProperty silverfish;
-    public final BooleanProperty teams;
     public final ModeProperty showTarget;
     public final ModeProperty debugLog;
     public final ModeProperty smartUnblockMode;
@@ -295,46 +277,11 @@ public class KillAura extends Module {
     }
 
     private boolean isValidTarget(EntityLivingBase entityLivingBase) {
-        if (!mc.theWorld.loadedEntityList.contains(entityLivingBase)) {
-            return false;
-        } else if (entityLivingBase != mc.thePlayer && entityLivingBase != mc.thePlayer.ridingEntity) {
-            if (entityLivingBase == mc.getRenderViewEntity() || entityLivingBase == mc.getRenderViewEntity().ridingEntity) {
-                return false;
-            } else if (entityLivingBase.deathTime > 0) {
-                return false;
-            } else if (RotationUtil.angleToEntity(entityLivingBase) > this.fov.getValue().floatValue()) {
-                return false;
-            } else if (!this.throughWalls.getValue() && RotationUtil.rayTrace(entityLivingBase) != null) {
-                return false;
-            } else if (entityLivingBase instanceof EntityOtherPlayerMP) {
-                if (!this.players.getValue()) {
-                    return false;
-                } else if (TeamUtil.isFriend((EntityPlayer) entityLivingBase)) {
-                    return false;
-                } else {
-                    return (!this.teams.getValue() || !TeamUtil.isSameTeam((EntityPlayer) entityLivingBase)) && !AntiBot.isBot(entityLivingBase);
-                }
-            } else if (entityLivingBase instanceof EntityDragon || entityLivingBase instanceof EntityWither) {
-                return this.bosses.getValue();
-            } else if (!(entityLivingBase instanceof EntityMob) && !(entityLivingBase instanceof EntitySlime)) {
-                if (entityLivingBase instanceof EntityAnimal
-                        || entityLivingBase instanceof EntityBat
-                        || entityLivingBase instanceof EntitySquid
-                        || entityLivingBase instanceof EntityVillager) {
-                    return this.animals.getValue();
-                } else if (!(entityLivingBase instanceof EntityIronGolem)) {
-                    return false;
-                } else {
-                    return this.golems.getValue() && (!this.teams.getValue() || !TeamUtil.hasTeamColor(entityLivingBase));
-                }
-            } else if (!(entityLivingBase instanceof EntitySilverfish)) {
-                return this.mobs.getValue();
-            } else {
-                return this.silverfish.getValue() && (!this.teams.getValue() || !TeamUtil.hasTeamColor(entityLivingBase));
-            }
-        } else {
-            return false;
-        }
+        Targets targets = (Targets) Myau.moduleManager.modules.get(Targets.class);
+        return targets != null
+                && targets.isValid(entityLivingBase)
+                && RotationUtil.angleToEntity(entityLivingBase) <= this.fov.getValue().floatValue()
+                && (this.throughWalls.getValue() || RotationUtil.rayTrace(entityLivingBase) == null);
     }
 
     private boolean isInRange(EntityLivingBase entityLivingBase) {
@@ -423,13 +370,6 @@ public class KillAura extends Module {
         this.weaponsOnly = new BooleanProperty("weapons-only", true);
         this.allowTools = new BooleanProperty("allow-tools", false, this.weaponsOnly::getValue);
         this.inventoryCheck = new BooleanProperty("inventory-check", true);
-        this.players = new BooleanProperty("players", true);
-        this.bosses = new BooleanProperty("bosses", false);
-        this.mobs = new BooleanProperty("mobs", false);
-        this.animals = new BooleanProperty("animals", false);
-        this.golems = new BooleanProperty("golems", false);
-        this.silverfish = new BooleanProperty("silverfish", false);
-        this.teams = new BooleanProperty("teams", true);
         this.showTarget = new ModeProperty("show-target", 0, new String[]{"NONE", "DEFAULT", "HUD"});
         this.debugLog = new ModeProperty("debug-log", 0, new String[]{"NONE", "HEALTH"});
         this.smartUnblockMode = new ModeProperty("unblock-mode", 0, new String[]{"STOP", "SWITCH", "EMPTY"}, () -> this.autoBlock.getValue() == 9);

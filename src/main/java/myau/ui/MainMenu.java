@@ -184,7 +184,6 @@ public class MainMenu extends GuiScreen {
         GlStateManager.popMatrix();
 
         this.fontRendererObj.drawStringWithShadow(ClientInfo.getDisplayVersion(), leftX + 2, topY + 76, 0xE6F3FAFF);
-        this.fontRendererObj.drawStringWithShadow("Discord: https://discord.gg/ssFYeKx3Yb", leftX + 2, topY + 91, 0xA8FFFFFF);
     }
 
     private void drawFooter() {

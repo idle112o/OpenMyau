@@ -153,6 +153,7 @@ public class Myau {
         moduleManager.modules.put(Sprint.class, new Sprint());
         moduleManager.modules.put(TargetESP.class, new TargetESP());
         moduleManager.modules.put(TargetHUD.class, new TargetHUD());
+        moduleManager.modules.put(Targets.class, new Targets());
         moduleManager.modules.put(TargetStrafe.class, new TargetStrafe());
         moduleManager.modules.put(Tracers.class, new Tracers());
         moduleManager.modules.put(Trajectories.class, new Trajectories());

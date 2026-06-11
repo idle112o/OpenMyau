@@ -7,7 +7,6 @@ import me.ksyz.accountmanager.auth.SessionManager;
 import me.ksyz.accountmanager.utils.Notification;
 import me.ksyz.accountmanager.utils.TextFormatting;
 import net.minecraft.client.gui.*;
-import org.apache.commons.lang3.RandomStringUtils;
 import org.lwjgl.input.Keyboard;
 
 import java.util.NoSuchElementException;
@@ -24,11 +23,8 @@ import java.util.concurrent.atomic.AtomicReference;
  */
 public class GuiAddToken extends GuiScreen {
     private final GuiScreen previousScreen;
-    private final String state;
-
     private GuiButton openButton = null;
     private boolean openButtonEnabled = true;
-    private GuiButton cancelButton = null;
     private String status = null;
     private String cause = null;
     private ExecutorService executor = null;
@@ -38,7 +34,6 @@ public class GuiAddToken extends GuiScreen {
 
     public GuiAddToken(GuiScreen previousScreen) {
         this.previousScreen = previousScreen;
-        this.state = RandomStringUtils.randomAlphanumeric(8);
     }
 
     @Override

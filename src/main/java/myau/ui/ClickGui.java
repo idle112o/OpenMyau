@@ -13,6 +13,7 @@ import myau.module.Module;
 import myau.module.modules.*;
 import myau.ui.components.CategoryComponent;
 import myau.ui.components.OnlineConfigComponent;
+import myau.ui.components.TargetPropertyComponent;
 import myau.util.ChatUtil;
 import net.minecraft.client.gui.GuiScreen;
 import org.lwjgl.input.Mouse;
@@ -170,6 +171,7 @@ public class ClickGui extends GuiScreen {
         registered.addAll(playerModules);
         registered.addAll(miscModules);
         registered.addAll(latencyModules);
+        registered.add(Myau.moduleManager.getModule(Targets.class));
 
         for (Module module : Myau.moduleManager.modules.values()) {
             if (!registered.contains(module)) {
@@ -208,6 +210,22 @@ public class ClickGui extends GuiScreen {
         CategoryComponent latency = new CategoryComponent("Latence", latencyModules);
         latency.setY(topOffset);
         categoryList.add(latency);
+        topOffset += 20;
+
+        CategoryComponent targets = new CategoryComponent("Targets");
+        targets.setY(topOffset);
+        Targets targetSettings = (Targets) Myau.moduleManager.getModule(Targets.class);
+        ArrayList<Component> targetComponents = new ArrayList<>();
+        targetComponents.add(new TargetPropertyComponent(targetSettings.players, targets, 16));
+        targetComponents.add(new TargetPropertyComponent(targetSettings.invisibles, targets, 28));
+        targetComponents.add(new TargetPropertyComponent(targetSettings.bosses, targets, 40));
+        targetComponents.add(new TargetPropertyComponent(targetSettings.mobs, targets, 52));
+        targetComponents.add(new TargetPropertyComponent(targetSettings.animals, targets, 64));
+        targetComponents.add(new TargetPropertyComponent(targetSettings.golems, targets, 76));
+        targetComponents.add(new TargetPropertyComponent(targetSettings.silverfish, targets, 88));
+        targetComponents.add(new TargetPropertyComponent(targetSettings.teams, targets, 100));
+        targets.setComponents(targetComponents);
+        categoryList.add(targets);
         topOffset += 20;
 
         this.onlineConfigCategory = new CategoryComponent("OnlConfigs");

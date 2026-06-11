@@ -116,6 +116,8 @@ public class AutoPot extends Module {
                     this.prevSlot = -1;
                 }
                 break;
+            default:
+                break;
         }
     }
 

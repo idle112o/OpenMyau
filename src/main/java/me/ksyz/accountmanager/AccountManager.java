@@ -7,7 +7,6 @@ import me.ksyz.accountmanager.utils.SSLUtils;
 import net.minecraft.client.Minecraft;
 import net.minecraftforge.common.MinecraftForge;
 
-import javax.net.ssl.SSLContext;
 import java.io.*;
 import java.util.ArrayList;
 import java.util.Optional;
@@ -29,7 +28,7 @@ public class AccountManager {
     public static final ArrayList<Account> accounts = new ArrayList<>();
 
     public static void init() {
-        SSLContext ignored = SSLUtils.getSSLContext();
+        SSLUtils.getSSLContext();
         Nan0EventRegister.register(MinecraftForge.EVENT_BUS,new Events());
 
         if (!file.exists()) {

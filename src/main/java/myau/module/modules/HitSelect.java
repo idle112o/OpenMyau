@@ -36,8 +36,6 @@ public class HitSelect extends Module {
     private boolean keepSprintWasEnabled = false;
     private int savedSlowdown = 0;
 
-    private int blockedHits = 0;
-    private int allowedHits = 0;
     private long attackTime = -1L;
     private boolean currentShouldAttack = false;
 
@@ -95,6 +93,8 @@ public class HitSelect extends Module {
                 case STOP_SPRINTING:
                     this.sprintState = false;
                     break;
+                default:
+                    break;
             }
             return;
         }
@@ -138,9 +138,7 @@ public class HitSelect extends Module {
 
             if (!allow) {
                 event.setCancelled(true);
-                this.blockedHits++;
             } else {
-                this.allowedHits++;
                 this.attackTime = System.currentTimeMillis();
             }
         }
@@ -359,8 +357,6 @@ public class HitSelect extends Module {
         this.savedSlowdown = 0;
         this.attackTime = -1L;
         this.currentShouldAttack = false;
-        this.blockedHits = 0;
-        this.allowedHits = 0;
     }
 
     @Override

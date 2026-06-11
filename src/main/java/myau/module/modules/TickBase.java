@@ -16,7 +16,6 @@ import myau.property.properties.ModeProperty;
 import myau.util.RandomUtil;
 import myau.util.TeamUtil;
 import net.minecraft.client.Minecraft;
-import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.network.play.server.S08PacketPlayerPosLook;
@@ -198,7 +197,7 @@ public class TickBase extends Module {
                 motionX *= friction;
                 motionZ *= friction;
                 fallDistance = onGround ? 0.0F : fallDistance + (float) Math.max(0.0D, -motionY);
-                tickBuffer.add(new TickData(new Vec3(x, y, z), fallDistance, motionX, motionY, motionZ, onGround, mc.thePlayer.isCollidedHorizontally));
+                tickBuffer.add(new TickData(new Vec3(x, y, z), fallDistance, onGround, mc.thePlayer.isCollidedHorizontally));
             }
         }
     }
@@ -306,18 +305,12 @@ public class TickBase extends Module {
     private static class TickData {
         private final Vec3 position;
         private final float fallDistance;
-        private final double motionX;
-        private final double motionY;
-        private final double motionZ;
         private final boolean onGround;
         private final boolean isCollidedHorizontally;
 
-        TickData(Vec3 position, float fallDistance, double motionX, double motionY, double motionZ, boolean onGround, boolean isCollidedHorizontally) {
+        TickData(Vec3 position, float fallDistance, boolean onGround, boolean isCollidedHorizontally) {
             this.position = position;
             this.fallDistance = fallDistance;
-            this.motionX = motionX;
-            this.motionY = motionY;
-            this.motionZ = motionZ;
             this.onGround = onGround;
             this.isCollidedHorizontally = isCollidedHorizontally;
         }

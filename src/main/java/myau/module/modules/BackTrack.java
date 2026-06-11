@@ -265,7 +265,6 @@ public class BackTrack extends Module {
     }
 
     private void updateLegacyMode() {
-        long expiry = System.currentTimeMillis() - getSupposedDelay();
         Iterator<Map.Entry<UUID, List<BacktrackData>>> iterator = backtrackedPlayer.entrySet().iterator();
         while (iterator.hasNext()) {
             Map.Entry<UUID, List<BacktrackData>> entry = iterator.next();
@@ -596,6 +595,7 @@ public class BackTrack extends Module {
         globalTimer.reset();
     }
 
+    @SuppressWarnings("unchecked")
     private void receiveQueuedPacket(Packet<?> packet) {
         if (packet == null || mc.getNetHandler() == null || mc.theWorld == null || mc.thePlayer == null) return;
         try {

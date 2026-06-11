@@ -9,7 +9,6 @@ import myau.property.properties.BooleanProperty;
 import myau.property.properties.FloatProperty;
 import myau.property.properties.IntProperty;
 import myau.util.PacketUtil;
-import myau.util.RotationUtil;
 import net.minecraft.client.Minecraft;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.network.Packet;
@@ -58,7 +57,7 @@ public class KnockbackDelay extends Module {
 
         event.setCancelled(true);
         this.delaying = true;
-        this.delayedPackets.add(new DelayedPacket((Packet<INetHandlerPlayClient>) packet, System.currentTimeMillis()));
+        this.delayedPackets.add(new DelayedPacket(this.castToClientPacket(packet), System.currentTimeMillis()));
     }
 
     @EventTarget
@@ -95,6 +94,11 @@ public class KnockbackDelay extends Module {
             }
         }
         return best;
+    }
+
+    @SuppressWarnings("unchecked")
+    private Packet<INetHandlerPlayClient> castToClientPacket(Packet<?> packet) {
+        return (Packet<INetHandlerPlayClient>) packet;
     }
 
     private void releaseExpiredPackets() {

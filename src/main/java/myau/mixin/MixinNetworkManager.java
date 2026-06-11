@@ -26,6 +26,7 @@ public abstract class MixinNetworkManager {
             at = {@At("HEAD")},
             cancellable = true
     )
+    @SuppressWarnings("unchecked")
     private void channelRead0(ChannelHandlerContext channelHandlerContext, Packet<?> packet, CallbackInfo callbackInfo) {
         if (!packet.getClass().getName().startsWith("net.minecraft.network.play.client")) {
             if (Myau.delayManager != null && Myau.delayManager.shouldDelay((Packet<INetHandlerPlayClient>) packet)) {

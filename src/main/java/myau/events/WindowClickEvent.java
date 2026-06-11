@@ -14,4 +14,20 @@ public class WindowClickEvent extends EventCancellable {
         this.mouseButtonClicked = mouseButtonClicked;
         this.mode = mode;
     }
+
+    public int getWindowsId() {
+        return this.windowsId;
+    }
+
+    public int getSlotId() {
+        return this.slotId;
+    }
+
+    public int getMouseButtonClicked() {
+        return this.mouseButtonClicked;
+    }
+
+    public int getMode() {
+        return this.mode;
+    }
 }

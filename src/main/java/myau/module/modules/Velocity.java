@@ -40,7 +40,7 @@ public class Velocity extends Module {
     private int intaveTick = 0;
     private int intaveDamageTick = 0;
 
-    public final ModeProperty mode = new ModeProperty("mode", 0, new String[]{"VANILLA", "JUMP", "DELAY", "REVERSE", "LEGIT_TEST", "LEGIT_SMART", "INTAVE_REDUCE"});
+    public final ModeProperty mode = new ModeProperty("mode", 0, new String[]{"VANILLA", "JUMP", "DELAY", "REVERSE", "LEGIT_TEST", "LEGIT_SMART", "INTAVE_REDUCE", "GRIM_REDUCE"});
     public final IntProperty delayTicks = new IntProperty("delay-ticks", 3, 1, 20, () -> this.mode.getValue() == 2);
     public final PercentProperty delayChance = new PercentProperty("delay-chance", 100, () -> this.mode.getValue() == 2);
     public final IntProperty legitSmartJumpLimit = new IntProperty("legit-smart-jump-limit", 2, 1, 5, () -> this.mode.getValue() == 5);
@@ -51,6 +51,7 @@ public class Velocity extends Module {
     public final PercentProperty vertical = new PercentProperty("vertical", 100);
     public final PercentProperty explosionHorizontal = new PercentProperty("explosions-horizontal", 100);
     public final PercentProperty explosionVertical = new PercentProperty("explosions-vertical", 100);
+    public final IntProperty grimReduceJumpLimit = new IntProperty("grim-reduce-jump-limit", 2, 1, 5, () -> this.mode.getValue() == 7);
     public final BooleanProperty fakeCheck = new BooleanProperty("fake-check", true);
     public final BooleanProperty debugLog = new BooleanProperty("debug-log", false);
 
@@ -93,6 +94,10 @@ public class Velocity extends Module {
                 if (this.chanceCounter >= 100) {
                     this.jumpFlag = (this.mode.getValue() == 1 || this.mode.getValue() == 2) && event.getY() > 0.0;
                     this.delayActive = this.mode.getValue() == 2;
+                    if (this.mode.getValue() == 7) {
+                        this.hasReceivedVelocity = true;
+                        return;
+                    }
                     if (this.horizontal.getValue() > 0) {
                         event.setX(event.getX() * (double) this.horizontal.getValue() / 100.0);
                         event.setZ(event.getZ() * (double) this.horizontal.getValue() / 100.0);
@@ -175,6 +180,25 @@ public class Velocity extends Module {
                     this.hasReceivedVelocity = false;
                 }
             }
+            if (this.mode.getValue() == 7 && this.hasReceivedVelocity) {
+                if (mc.thePlayer.onGround
+                        && mc.thePlayer.hurtTime >= 8
+                        && mc.thePlayer.isSprinting()
+                        && mc.currentScreen == null
+                        && !mc.thePlayer.isPotionActive(Potion.jump)
+                        && !this.isInLiquidOrWeb()) {
+                    if (this.legitSmartJumpCount >= this.grimReduceJumpLimit.getValue()) {
+                        this.legitSmartJumpCount = 0;
+                        this.hasReceivedVelocity = false;
+                    } else {
+                        this.legitSmartJumpCount++;
+                        mc.thePlayer.movementInput.jump = true;
+                    }
+                } else if (mc.thePlayer.hurtTime <= 1) {
+                    this.hasReceivedVelocity = false;
+                    this.legitSmartJumpCount = 0;
+                }
+            }
         }
     }
 
@@ -211,7 +235,7 @@ public class Velocity extends Module {
                             return;
                         }
                     }
-                    if (this.mode.getValue() == 5 || this.mode.getValue() == 6) {
+                    if (this.mode.getValue() == 5 || this.mode.getValue() == 6 || this.mode.getValue() == 7) {
                         this.hasReceivedVelocity = true;
                     }
                     if (this.debugLog.getValue()) {

@@ -7,8 +7,6 @@ import myau.ui.Component;
 import myau.ui.dataset.BindStage;
 import myau.util.KeyBindUtil;
 import net.minecraft.client.Minecraft;
-import org.lwjgl.input.Keyboard;
-import org.lwjgl.input.Mouse;
 import org.lwjgl.opengl.GL11;
 
 import java.util.concurrent.atomic.AtomicInteger;
@@ -37,7 +35,6 @@ public class BindComponent implements Component {
 
     @Override
     public void update(int mousePosX, int mousePosY) {
-        boolean h = this.isHovered(mousePosX, mousePosY);
         this.y = this.parentModule.category.getY() + this.offsetY;
         this.x = this.parentModule.category.getX();
     }

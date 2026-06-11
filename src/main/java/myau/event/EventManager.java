@@ -102,6 +102,7 @@ public final class EventManager {
      * @param method Method to register to the HashMap.
      * @param object Source object of the method.
      */
+    @SuppressWarnings("unchecked")
     private static void register(Method method, Object object) {
         Class<? extends Event> indexClass = (Class<? extends Event>) method.getParameterTypes()[0];
         //New MethodData from the Method we are registering.

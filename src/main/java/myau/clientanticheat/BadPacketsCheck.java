@@ -1,7 +1,6 @@
 package myau.clientanticheat;
 
 import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.util.MathHelper;
 
 import java.util.HashMap;
 import java.util.Map;

@@ -115,6 +115,9 @@ public class AutoHeal extends Module {
                         mc.thePlayer.inventory.currentItem = this.prevSlot;
                         this.prevSlot = -1;
                     }
+                    break;
+                default:
+                    break;
             }
         }
     }
