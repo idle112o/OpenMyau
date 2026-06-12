@@ -85,14 +85,14 @@ public class Targets extends Module {
         if (TeamUtil.isFriend(player)) {
             return false;
         }
-        return this.allowTeamColor(player) && !AntiBot.isBot(player);
+        return this.allowSameTeam(player) && !AntiBot.isBot(player);
     }
 
     public boolean allowTeamColor(EntityLivingBase entityLivingBase) {
-        return !this.teams.getValue() || !TeamUtil.hasTeamColor(entityLivingBase);
+        return this.teams.getValue() || !TeamUtil.hasTeamColor(entityLivingBase);
     }
 
     public boolean allowSameTeam(EntityPlayer player) {
-        return !this.teams.getValue() || !TeamUtil.isSameTeam(player);
+        return this.teams.getValue() || !TeamUtil.isSameTeam(player);
     }
 }
