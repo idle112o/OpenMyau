@@ -1,4 +1,4 @@
-package myau.module.modules;
+package myau.module.modules.target;
 
 import myau.module.modules.misc.AntiBot;
 import myau.module.Module;

@@ -6,7 +6,8 @@ import myau.module.modules.misc.BedNuker;
 import myau.module.modules.render.HUD;
 import myau.module.modules.movement.NoSlow;
 import myau.module.modules.player.Scaffold;
-import myau.module.modules.Targets;
+import myau.module.modules.target.Targets;
+
 import com.google.common.base.CaseFormat;
 import myau.Myau;
 import myau.enums.BlinkModules;
@@ -106,7 +107,6 @@ public class KillAura extends Module {
     public final IntProperty smartMaxOwnHurtTime;
     public final FloatProperty smartMaxDirectionDiff;
     public final IntProperty smartMaxSwingProgress;
-    public final BooleanProperty ignoreTeammates;
     private int ticks = 255;
 
     private long getAttackDelay() {
@@ -289,9 +289,6 @@ public class KillAura extends Module {
     }
 
     private boolean isValidTarget(EntityLivingBase entityLivingBase) {
-        if (this.ignoreTeammates.getValue() && entityLivingBase instanceof EntityPlayer && TeamUtil.isSameTeam((EntityPlayer) entityLivingBase)) {
-            return false;
-        }
         Targets targets = (Targets) Myau.moduleManager.modules.get(Targets.class);
         return targets != null
                 && targets.isValid(entityLivingBase)
@@ -379,7 +376,6 @@ public class KillAura extends Module {
         this.smoothing = new PercentProperty("smoothing", 0);
         this.angleStep = new IntProperty("angle-step", 90, 30, 180);
         this.throughWalls = new BooleanProperty("through-walls", true);
-        this.ignoreTeammates = new BooleanProperty("ignore-teammates", true);
         this.requirePress = new BooleanProperty("require-press", false);
         this.allowMining = new BooleanProperty("allow-mining", true);
         this.whileScaffold = new BooleanProperty("while-scaffold", false);

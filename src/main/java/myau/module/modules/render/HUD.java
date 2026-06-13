@@ -260,6 +260,11 @@ public class HUD extends Module {
     public void onTick(TickEvent event) {
         if (this.isEnabled() && event.getType() == EventType.POST) {
             this.activeModules = Myau.moduleManager.modules.values().stream().filter(module -> module.isEnabled() && !module.isHidden() && !this.isCategoryHidden(module)).sorted(Comparator.comparingInt(this::getModuleWidth).reversed()).collect(Collectors.<Module>toList());
+            try {
+                Myau.clientName = ChatColors.getDynamicPrefix();
+            } catch (Exception e) {
+                // ignore
+            }
         }
     }
 
@@ -270,7 +275,7 @@ public class HUD extends Module {
         if (this.hideMovement.getValue() && (module instanceof AntiAFK || module instanceof Fly || module instanceof Speed || module instanceof LongJump || module instanceof Sprint || module instanceof SafeWalk || module instanceof Jesus || module instanceof Blink || module instanceof NoFall || module instanceof NoSlow || module instanceof KeepSprint || module instanceof Eagle || module instanceof NoJumpDelay || module instanceof AntiVoid)) {
             return true;
         }
-        if (this.hideRender.getValue() && (module instanceof ESP || module instanceof Chams || module instanceof FullBright || module instanceof Tracers || module instanceof NameTags || module instanceof Xray || module instanceof TargetHUD || module instanceof TargetESP || module instanceof StatusEffect || module instanceof Keystrokes || module instanceof BlockOverlay || module instanceof Indicators || module instanceof BedESP || module instanceof ItemESP || module instanceof ViewClip || module instanceof NoHurtCam || module instanceof HUD || module instanceof GuiModule || module instanceof ChestESP || module instanceof Trajectories || module instanceof Radar)) {
+        if (this.hideRender.getValue() && (module instanceof ESP || module instanceof Chams || module instanceof FullBright || module instanceof Tracers || module instanceof NameTags || module instanceof Xray || module instanceof TargetHUD || module instanceof TargetESP || module instanceof Keystrokes || module instanceof BlockOverlay || module instanceof Indicators || module instanceof BedESP || module instanceof ItemESP || module instanceof ViewClip || module instanceof NoHurtCam || module instanceof HUD || module instanceof GuiModule || module instanceof ChestESP || module instanceof Trajectories || module instanceof Radar)) {
             return true;
         }
         if (this.hidePlayer.getValue() && (module instanceof AutoHeal || module instanceof AutoPot || module instanceof AutoRod || module instanceof AutoTool || module instanceof ChestStealer || module instanceof InvManager || module instanceof InvWalk || module instanceof Scaffold || module instanceof AutoBlockIn || module instanceof AutoBedDef || module instanceof SpeedMine || module instanceof FastPlace || module instanceof GhostHand || module instanceof MCF || module instanceof BreakProgress || module instanceof AntiDebuff)) {
@@ -549,6 +554,43 @@ public class HUD extends Module {
                 GlStateManager.enableDepth();
                 GlStateManager.popMatrix();
             }
+            if (mc.thePlayer != null) {
+                java.util.Collection<net.minecraft.potion.PotionEffect> effects = mc.thePlayer.getActivePotionEffects();
+                if (!effects.isEmpty()) {
+                    myau.util.font.Font font = myau.util.font.Fonts.MAIN.get(18);
+                    int drawY = new ScaledResolution(mc).getScaledHeight() - 22;
+                    for (net.minecraft.potion.PotionEffect effect : effects) {
+                        net.minecraft.potion.Potion potion = net.minecraft.potion.Potion.potionTypes[effect.getPotionID()];
+                        if (potion == null) continue;
+
+                        String name = net.minecraft.client.resources.I18n.format(potion.getName());
+                        if (effect.getAmplifier() > 0) {
+                            name += " " + toRoman(effect.getAmplifier() + 1);
+                        }
+                        String time = net.minecraft.potion.Potion.getDurationString(effect);
+                        String text = name + " | " + time;
+
+                        int textWidth = font.getStringWidth(text);
+                        int totalWidth = 18 + 4 + textWidth;
+                        int drawX = new ScaledResolution(mc).getScaledWidth() - totalWidth - 6;
+
+                        RenderUtil.renderPotionEffect(effect, drawX, drawY);
+                        font.drawWithShadow(text, drawX + 22, drawY + (18.0f - font.height()) / 2.0f, 0xFFFFFFFF);
+
+                        drawY -= 20;
+                    }
+                }
+            }
+        }
+    }
+
+    private String toRoman(int value) {
+        switch (value) {
+            case 2: return "II";
+            case 3: return "III";
+            case 4: return "IV";
+            case 5: return "V";
+            default: return String.valueOf(value);
         }
     }
 }

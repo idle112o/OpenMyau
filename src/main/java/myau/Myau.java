@@ -18,6 +18,7 @@ import myau.module.modules.player.*;
 import myau.module.modules.misc.*;
 import myau.module.modules.latency.*;
 import myau.module.modules.minigames.BedwarUtils;
+import myau.module.modules.target.Targets;
 import myau.property.Property;
 import myau.property.PropertyManager;
 
@@ -157,7 +158,6 @@ public class Myau {
         moduleManager.modules.put(Spammer.class, new Spammer());
         moduleManager.modules.put(Speed.class, new Speed());
         moduleManager.modules.put(SpeedMine.class, new SpeedMine());
-        moduleManager.modules.put(StatusEffect.class, new StatusEffect());
         moduleManager.modules.put(Sprint.class, new Sprint());
         moduleManager.modules.put(TargetESP.class, new TargetESP());
         moduleManager.modules.put(TargetHUD.class, new TargetHUD());

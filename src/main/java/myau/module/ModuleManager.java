@@ -28,6 +28,7 @@ public class ModuleManager {
         CATEGORY_NAMES.put("misc", "Misc");
         CATEGORY_NAMES.put("latency", "Latency");
         CATEGORY_NAMES.put("minigames", "Minigames");
+        CATEGORY_NAMES.put("target", "Target");
     }
 
     private boolean sound = false;

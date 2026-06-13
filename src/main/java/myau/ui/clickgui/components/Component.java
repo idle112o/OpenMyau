@@ -28,6 +28,10 @@ public class Component {
         return 0f;
     }
 
+    public float getScrollExtentHeightF() {
+        return getHeightF();
+    }
+
     public void onGuiClosed() {
     }
 

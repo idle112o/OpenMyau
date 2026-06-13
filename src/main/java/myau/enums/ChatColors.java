@@ -41,7 +41,54 @@ public enum ChatColors {
         return this.rgb;
     }
 
+    public static ChatColors getClosestColor(java.awt.Color target) {
+        ChatColors closest = ChatColors.WHITE;
+        double minDistance = Double.MAX_VALUE;
+        for (ChatColors color : ChatColors.values()) {
+            if (color == ChatColors.MAGIC || color == ChatColors.BOLD || color == ChatColors.STRIKETHROUGH || 
+                color == ChatColors.UNDERLINE || color == ChatColors.ITALIC || color == ChatColors.RESET) {
+                continue;
+            }
+            java.awt.Color c = new java.awt.Color(color.toAwtColor());
+            double dist = Math.pow(c.getRed() - target.getRed(), 2) +
+                          Math.pow(c.getGreen() - target.getGreen(), 2) +
+                          Math.pow(c.getBlue() - target.getBlue(), 2);
+            if (dist < minDistance) {
+                minDistance = dist;
+                closest = color;
+            }
+        }
+        return closest;
+    }
+
+    public static String getDynamicPrefix() {
+        try {
+            myau.module.modules.render.HUD hud = (myau.module.modules.render.HUD) myau.Myau.moduleManager.getModule(myau.module.modules.render.HUD.class);
+            if (hud != null && hud.isEnabled()) {
+                java.awt.Color currentColor = hud.getColor(System.currentTimeMillis());
+                ChatColors closest = getClosestColor(currentColor);
+                return closest.toString() + "Miau " + closest.toString() + "\u00bb\u00a7r ";
+            }
+        } catch (Exception e) {
+            // ignore
+        }
+        return "\u00a7bMiau \u00a7b\u00bb\u00a7r ";
+    }
+
     public static String formatColor(String string) {
+        if (string == null) return null;
+
+        String defaultPrefixRaw = "&7[&cM&6i&ea&au&7]&r ";
+        String defaultPrefixFormatted = "\u00a77[\u00a7cM\u00a76i\u00a7ea\u00a7au\u00a77]\u00a7r ";
+        String dynamicPrefix = getDynamicPrefix();
+
+        if (string.contains(defaultPrefixRaw)) {
+            string = string.replace(defaultPrefixRaw, dynamicPrefix);
+        }
+        if (string.contains(defaultPrefixFormatted)) {
+            string = string.replace(defaultPrefixFormatted, dynamicPrefix);
+        }
+
         char[] cArray = string.toCharArray();
         for (int i = 0; i < cArray.length - 1; ++i) {
             if (cArray[i] != '&' || "0123456789AaBbCcDdEeFfKkLlMmNnOoRr".indexOf(cArray[i + 1]) <= -1) continue;
