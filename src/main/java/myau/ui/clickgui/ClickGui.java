@@ -4,6 +4,8 @@ import myau.ui.clickgui.components.Component;
 import myau.ui.clickgui.components.impl.BindComponent;
 import myau.ui.clickgui.components.impl.CategoryComponent;
 import myau.ui.clickgui.components.impl.ModuleComponent;
+import myau.ui.clickgui.components.impl.OnlineConfigComponent;
+import myau.config.online.OnlineConfigEntry;
 import myau.util.Timer;
 import myau.util.shader.BlurUtils;
 import myau.util.shader.RoundedUtils;
@@ -28,13 +30,19 @@ public class ClickGui extends GuiScreen {
     public static ArrayList<CategoryComponent> categories;
     private int actualScreenWidth;
     private int actualScreenHeight;
+    private static final java.util.concurrent.ExecutorService ONLINE_CONFIG_EXECUTOR = java.util.concurrent.Executors.newSingleThreadExecutor(runnable -> {
+        Thread thread = new Thread(runnable, "OpenMiau OnlConfigs");
+        thread.setDaemon(true);
+        return thread;
+    });
+    private final myau.config.online.OnlineConfigClient onlineConfigClient = new myau.config.online.OnlineConfigClient();
+    private CategoryComponent onlineConfigCategory;
     private static boolean isNotFirstOpen;
     private boolean pendingScaleRefresh;
-
     public ClickGui() {
         categories = new ArrayList<>();
         int xOffset = 5;
-        String[] values = new String[]{"Combat", "Movement", "Render", "Player", "Misc", "Latency", "Minigames"};
+        String[] values = new String[]{"Combat", "Movement", "Render", "Player", "Misc", "Latency", "Minigames", "Target", "OnlineConfig"};
 
         for (int i = 0; i < values.length; ++i) {
             String c = values[i];
@@ -43,6 +51,12 @@ public class ClickGui extends GuiScreen {
             categoryComponent.setX(xOffset, false);
             categories.add(categoryComponent);
             xOffset += 98; // width is 92, leaving a gap of 6 pixels between categories
+        }
+        for (CategoryComponent c : categories) {
+            if (c.category.equalsIgnoreCase("OnlineConfig")) {
+                this.onlineConfigCategory = c;
+                break;
+            }
         }
     }
 
@@ -62,6 +76,7 @@ public class ClickGui extends GuiScreen {
             categoryComponent.limitPositions();
             categoryComponent.reloadModules();
         }
+        this.refreshOnlineConfigs();
     }
 
     private List<CategoryComponent> getCategoriesInRenderOrder() {
@@ -134,7 +149,7 @@ public class ClickGui extends GuiScreen {
         }
 
         if (topmostCategory != null && topmostCategory.isOpened() && !topmostCategory.getModules().isEmpty() && !topmostCategory.overTitle(mouseX, mouseY)) {
-            for (ModuleComponent component : topmostCategory.getModules()) {
+            for (Component component : topmostCategory.getModules()) {
                 if (component.onClick(mouseX, mouseY, mouseButton)) {
                     break;
                 }
@@ -205,10 +220,12 @@ public class ClickGui extends GuiScreen {
 
     private boolean binding() {
         for (CategoryComponent c : categories) {
-            for (ModuleComponent m : c.getModules()) {
-                for (Component component : m.settings) {
-                    if (component instanceof BindComponent && ((BindComponent) component).isBinding) {
-                        return true;
+            for (Component m : c.getModules()) {
+                if (m instanceof ModuleComponent) {
+                    for (Component component : ((ModuleComponent) m).settings) {
+                        if (component instanceof BindComponent && ((BindComponent) component).isBinding) {
+                            return true;
+                        }
                     }
                 }
             }
@@ -218,10 +235,88 @@ public class ClickGui extends GuiScreen {
 
     public void onSliderChange() {
         for (CategoryComponent c : categories) {
-            for (ModuleComponent m : c.getModules()) {
-                m.onSliderChange();
+            for (Component m : c.getModules()) {
+                if (m instanceof ModuleComponent) {
+                    ((ModuleComponent) m).onSliderChange();
+                }
             }
         }
+    }
+
+    private void refreshOnlineConfigs() {
+        this.setOnlineConfigStatus("Loading...", "fetching configs", null);
+        ONLINE_CONFIG_EXECUTOR.execute(() -> {
+            try {
+                List<OnlineConfigEntry> entries = java.util.Collections
+                        .unmodifiableList(new java.util.ArrayList<>(this.onlineConfigClient.list()));
+                mc.addScheduledTask(() -> this.setOnlineConfigEntries(entries));
+            } catch (Exception e) {
+                mc.addScheduledTask(() -> this.setOnlineConfigStatus("Fetch failed", e.getMessage(), null));
+            }
+        });
+    }
+
+    private void setOnlineConfigEntries(List<OnlineConfigEntry> entries) {
+        if (entries.isEmpty()) {
+            this.setOnlineConfigStatus("No configs", "online list is empty", null);
+            return;
+        }
+        ArrayList<Component> components = new ArrayList<>();
+        float offset = 16f;
+        for (OnlineConfigEntry entry : entries) {
+            String subtitle = "by " + entry.getAuthor() + " | " + safe(entry.setting_type);
+            if (!entry.getVersion().isEmpty()) {
+                subtitle += " • v" + entry.getVersion();
+            }
+            components.add(new OnlineConfigComponent(this.onlineConfigCategory, offset, entry.getName(), subtitle,
+                    () -> this.loadOnlineConfig(entry)));
+            offset += 24f;
+        }
+        this.onlineConfigCategory.modules.clear();
+        this.onlineConfigCategory.modules.addAll(components);
+        this.onlineConfigCategory.updateHeight();
+    }
+
+    private void setOnlineConfigStatus(String title, String subtitle, Runnable action) {
+        if (this.onlineConfigCategory == null)
+            return;
+        ArrayList<Component> components = new ArrayList<>();
+        components.add(new OnlineConfigComponent(this.onlineConfigCategory, 16f, title, subtitle, action));
+        this.onlineConfigCategory.modules.clear();
+        this.onlineConfigCategory.modules.addAll(components);
+        this.onlineConfigCategory.updateHeight();
+    }
+
+    private void loadOnlineConfig(OnlineConfigEntry entry) {
+        this.setOnlineConfigStatus("Loading " + entry.getName(), "please wait", null);
+        ONLINE_CONFIG_EXECUTOR.execute(() -> {
+            try {
+                String json = this.onlineConfigClient.load(entry.getId());
+                mc.addScheduledTask(() -> {
+                    try {
+                        int applied = new myau.config.online.OnlineConfigApplier().apply(json);
+                        myau.util.ChatUtil.sendFormatted(
+                                String.format("%sOnline config loaded (&a&o%s&r) &7- applied %d setting(s)&r",
+                                        myau.Myau.clientName, entry.getName(), applied));
+                        this.refreshOnlineConfigs();
+                    } catch (Exception e) {
+                        myau.util.ChatUtil.sendFormatted(
+                                myau.Myau.clientName + "Failed to load online config: &c" + e.getMessage() + "&r");
+                        this.refreshOnlineConfigs();
+                    }
+                });
+            } catch (Exception e) {
+                mc.addScheduledTask(() -> {
+                    myau.util.ChatUtil.sendFormatted(
+                            myau.Myau.clientName + "Failed to load online config: &c" + e.getMessage() + "&r");
+                    this.refreshOnlineConfigs();
+                });
+            }
+        });
+    }
+
+    private static String safe(String value) {
+        return value == null || value.trim().isEmpty() ? "unknown" : value;
     }
 
     public void requestScaleRefresh() {

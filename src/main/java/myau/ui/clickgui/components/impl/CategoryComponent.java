@@ -29,7 +29,7 @@ public class CategoryComponent {
     private static long interactionSequence;
     private static final Map<String, CategoryIconStacks> CATEGORY_ICON_STACKS = buildCategoryIconStacks();
 
-    public List<ModuleComponent> modules = new CopyOnWriteArrayList<>();
+    public List<Component> modules = new CopyOnWriteArrayList<>();
     public String category;
     public boolean opened;
     public float width;
@@ -105,11 +105,15 @@ public class CategoryComponent {
         }
     }
 
-    public List<ModuleComponent> getModules() {
+    public List<Component> getModules() {
         return this.modules;
     }
 
     public void reloadModules() {
+        if (this.category.equalsIgnoreCase("OnlineConfig")) {
+            syncAfterModuleReload();
+            return;
+        }
         Map<String, Boolean> openStates = captureModuleOpenStates();
         this.modules.clear();
         this.titleHeight = 13;
@@ -130,9 +134,9 @@ public class CategoryComponent {
 
     private Map<String, Boolean> captureModuleOpenStates() {
         Map<String, Boolean> openStates = new HashMap<>();
-        for (ModuleComponent moduleComponent : this.modules) {
-            if (moduleComponent.mod != null) {
-                openStates.put(moduleComponent.mod.getName(), moduleComponent.isOpened);
+        for (Component moduleComponent : this.modules) {
+            if (moduleComponent instanceof ModuleComponent && ((ModuleComponent) moduleComponent).mod != null) {
+                openStates.put(((ModuleComponent) moduleComponent).mod.getName(), ((ModuleComponent) moduleComponent).isOpened);
             }
         }
         return openStates;
@@ -208,7 +212,7 @@ public class CategoryComponent {
     }
 
     public void onScroll(int mouseScrollInput, float mouseX, float mouseY) {
-        for (ModuleComponent mod : this.modules) {
+        for (Component mod : this.modules) {
             mod.onScroll(mouseScrollInput);
         }
         if (!hoveringOverCategory || !this.opened) {
@@ -240,8 +244,10 @@ public class CategoryComponent {
             textTimer = null;
         }
 
-        for (ModuleComponent c : this.modules) {
-            c.updateAnimationState();
+        for (Component c : this.modules) {
+            if (c instanceof ModuleComponent) {
+                ((ModuleComponent) c).updateAnimationState();
+            }
         }
 
         CategoryLayoutMetrics layoutMetrics = computeLayoutMetrics(this.opened || smoothTimer != null);
@@ -401,7 +407,7 @@ public class CategoryComponent {
         }
         if (!this.modules.isEmpty() && (this.opened || this.smoothTimer != null)) {
             float modulesHeight = 0f;
-            for (ModuleComponent c : this.modules) {
+            for (Component c : this.modules) {
                 modulesHeight += c.getHeightF();
             }
             return this.y + this.titleHeight + modulesHeight + 4;
@@ -458,7 +464,7 @@ public class CategoryComponent {
             if (this.opened) {
                 if (!this.modules.isEmpty()) {
                     float modulesHeight = 0f;
-                    for (ModuleComponent c : this.modules) {
+                    for (Component c : this.modules) {
                         modulesHeight += c.getHeightF();
                     }
                     finalHeight += modulesHeight + 4;
@@ -487,7 +493,7 @@ public class CategoryComponent {
         float totalScrollExtent = 0f;
         float moduleOffset = this.titleHeight + 3;
 
-        for (ModuleComponent component : this.modules) {
+        for (Component component : this.modules) {
             if (updateModuleOffsets) {
                 component.updateHeight(moduleOffset);
             }
@@ -511,7 +517,7 @@ public class CategoryComponent {
 
     private static Map<String, CategoryIconStacks> buildCategoryIconStacks() {
         Map<String, CategoryIconStacks> iconStacks = new HashMap<>();
-        String[] categories = new String[]{"Combat", "Movement", "Render", "Player", "Misc", "Latency", "Minigames"};
+        String[] categories = new String[]{"Combat", "Movement", "Render", "Player", "Misc", "Latency", "Minigames", "Target", "OnlineConfig"};
         for (String cat : categories) {
             ItemStack normalStack = createCategoryIconStack(cat, false);
             ItemStack activeStack = createCategoryIconStack(cat, true);
@@ -538,6 +544,10 @@ public class CategoryComponent {
             itemStack = new ItemStack(Items.compass);
         } else if (category.equalsIgnoreCase("Minigames")) {
             itemStack = new ItemStack(Items.gold_ingot);
+        } else if (category.equalsIgnoreCase("OnlineConfig")) {
+            itemStack = new ItemStack(Items.writable_book);
+        } else if (category.equalsIgnoreCase("Target")) {
+            itemStack = new ItemStack(Items.arrow);
         } else {
             return null;
         }
